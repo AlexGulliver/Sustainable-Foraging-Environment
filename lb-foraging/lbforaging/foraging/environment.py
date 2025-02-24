@@ -292,6 +292,35 @@ class ForagingEnv(gym.Env):
             # print("food count:", food_count)  # Debug print
         self._food_spawned = self.field.sum()
 
+    def spawn_food(self, max_num_food):
+        food_count = 0
+        attempts = 0
+
+        while food_count < max_num_food and attempts < 1000:
+            attempts += 1
+            row = self.np_random.integers(1, self.rows - 1)
+            col = self.np_random.integers(1, self.cols - 1)
+
+            # Debug print to check location and attempt count
+            # print(f"Attempt {attempts}: Trying to place food at ({row}, {col})")
+
+            # check if it has neighbors:
+            if (
+                self.neighborhood(row, col).sum() > 0
+                or self.neighborhood(row, col, distance=2, ignore_diag=True) > 0
+                or not self._is_empty_location(row, col)
+            ):
+                # print(f"Blocked location at ({row}, {col})")
+                continue
+
+            self.field[row, col] = 1
+
+            food_count += 1
+            # print(f"Food placed at ({row}, {col})")  # Debug print
+            # print("food count:", food_count)  # Debug print
+        self._food_spawned = self.field.sum()
+
+
     def _is_empty_location(self, row, col):
         if self.field[row, col] != 0:
             return False

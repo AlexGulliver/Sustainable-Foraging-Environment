@@ -6,6 +6,7 @@ import numpy as np
 import gymnasium as gym
 from lbforaging.foraging.environment import Action
 import pyglet
+import time
 
 def parse_args():
     parser = ArgumentParser()
@@ -54,7 +55,7 @@ class VisualisedEnv:
             self.running = False
             self.env.close()
 
-    def _run_episodes(self, num_episodes=10):
+    def _run_episodes(self, num_episodes=1):
         """Runs the environment for a specified number of episodes (default 100)."""
         total_rewards = np.zeros(self.n_agents)
 
@@ -66,7 +67,7 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-            for step in range(100):  # Run up to 100 steps per episode
+            for step in range(1):  # Run up to 100 steps per episode
                 actions = [np.random.choice(list(Action)) for _ in range(self.n_agents)]
                 obss, rews, done, trunc, _ = self.env.step([act.value for act in actions])
                 ep_returns += np.array(rews)
@@ -84,6 +85,7 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} reward: {ep_returns}\n")
         print(f"Total rewards after 100 episodes: {total_rewards}")
+        time.sleep(15)
         self.env.close()
 
 

@@ -2,6 +2,9 @@
 # Created by https://www.gitignore.io/api/linux,python,windows,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=linux,python,windows,visualstudiocode
 
+### Mac ###
+.DS_Store
+
 ### Linux ###
 *~
 
