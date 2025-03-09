@@ -42,6 +42,25 @@ for s, p, f, mfl, c, po, pen in product(
         },
     )
 
+register(
+    id="SustainableForagingEnv-v0",
+    entry_point="lbforaging.foraging:ForagingEnv",
+    kwargs={
+        "players": 8,
+        "field_size": (8, 8),
+        "min_player_level": 1,
+        "max_player_level": 2,
+        "min_food_level": 1,
+        "max_food_level": 1,
+        "max_num_food": 64,
+        "sight": 2,
+        "max_episode_steps": 50,
+        "grid_observation": False,
+        "penalty": 0.1,
+        "force_coop": False,
+    },
+)
+
 
 def register_grid_envs():
     for s, p, f, mfl, c in product(sizes, players, foods, max_food_level, coop):

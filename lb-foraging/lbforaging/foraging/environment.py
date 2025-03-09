@@ -262,64 +262,68 @@ class ForagingEnv(gym.Env):
         ]
 
     def spawn_food(self, max_num_food):
+
         food_count = 0
         attempts = 0
-
-        # permute food levels
-        # food_permutation = self.np_random.permutation(max_num_food)
-
         while food_count < max_num_food and attempts < 1000:
             attempts += 1
-            row = self.np_random.integers(1, self.rows - 1)
-            col = self.np_random.integers(1, self.cols - 1)
-
-            # Debug print to check location and attempt count
-            # print(f"Attempt {attempts}: Trying to place food at ({row}, {col})")
-
-            # check if it has neighbors:
-            if (
-                self.neighborhood(row, col).sum() > 0
-                or self.neighborhood(row, col, distance=2, ignore_diag=True) > 0
-                or not self._is_empty_location(row, col)
-            ):
+            row = self.np_random.integers(0, self.rows)
+            col = self.np_random.integers(0, self.cols)
+                        # check if it has neighbors:
+            if (not self._is_empty_location(row, col)):
                 # print(f"Blocked location at ({row}, {col})")
                 continue
 
             self.field[row, col] = 1
 
             food_count += 1
-            # print(f"Food placed at ({row}, {col})")  # Debug print
-            # print("food count:", food_count)  # Debug print
         self._food_spawned = self.field.sum()
 
-    def spawn_food(self, max_num_food):
-        food_count = 0
-        attempts = 0
+    # def spawn_food(self, replenishment_rate, max_num_food, previous_field):
+        
+    #     oldfield = previous_field
+    #     food_count = 0
+    #     attempts = 0
 
-        while food_count < max_num_food and attempts < 1000:
-            attempts += 1
-            row = self.np_random.integers(1, self.rows - 1)
-            col = self.np_random.integers(1, self.cols - 1)
+    #     # If the entire field is empty, spawn max food
+    #     if np.all(oldfield == 0):
+    #         print("FULLHOUSE")
+    #         while food_count < max_num_food and attempts < 1000:
+    #             attempts += 1
+    #             row = self.np_random.integers(0, self.rows)
+    #             col = self.np_random.integers(0, self.cols)
+    #                         # check if it has neighbors:
+    #             if (not self._is_empty_location(row, col)):
+    #                 # print(f"Blocked location at ({row}, {col})")
+    #                 continue
 
-            # Debug print to check location and attempt count
-            # print(f"Attempt {attempts}: Trying to place food at ({row}, {col})")
+    #             self.field[row, col] = 1
 
-            # check if it has neighbors:
-            if (
-                self.neighborhood(row, col).sum() > 0
-                or self.neighborhood(row, col, distance=2, ignore_diag=True) > 0
-                or not self._is_empty_location(row, col)
-            ):
-                # print(f"Blocked location at ({row}, {col})")
-                continue
+    #             food_count += 1
+    #         self._food_spawned = self.field.sum()
+    #     else:
+    #         # If the field is not entirely empty, try to spawn food in each empty cell with a probability of replenishment_rate
+    #         for row in range(self.rows):
+    #             for col in range(self.cols):
+    #                 if self._is_empty_location(row, col):
+    #                     if oldfield[row, col] == 0:
+    #                         if self.np_random.uniform() < replenishment_rate:
+    #                             self.field[row, col] = 1
+    #                             food_count += 1
+    #         self._food_spawned = self.field.sum()
 
-            self.field[row, col] = 1
-
-            food_count += 1
-            # print(f"Food placed at ({row}, {col})")  # Debug print
-            # print("food count:", food_count)  # Debug print
+    def replenish_food(self, replenishment_rate, previous_field):
+        """Replenishes empty cells with food based on replenishment rate."""
+        # If the field is not entirely empty, try to spawn food in each empty cell with a probability of replenishment_rate
+        food_count= 0
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if self._is_empty_location(row, col):
+                    if previous_field[row, col] == 0:
+                        if self.np_random.uniform() < replenishment_rate:
+                            self.field[row, col] = 1
+                            food_count += 1
         self._food_spawned = self.field.sum()
-
 
     def _is_empty_location(self, row, col):
         if self.field[row, col] != 0:
@@ -529,15 +533,16 @@ class ForagingEnv(gym.Env):
         if seed is not None:
             # setting seed
             super().reset(seed=seed, options=options)
-
+        
+        self.previousfield = self.field
+        print(self.previousfield, "PREVIOUS FIELD")
         self.field = np.zeros(self.field_size, np.int32)
         self.spawn_players()
 
-        self.spawn_food(
-            self.max_num_food,
-        )
+        self.spawn_food(max_num_food=65)
         # print("Field after spawning food:")
         # print(self.field)
+
         self.current_step = 0
         self._game_over = False
         self._gen_valid_moves()
@@ -610,19 +615,18 @@ class ForagingEnv(gym.Env):
 
             for a in adj_players:
                 a.reward = float(food)
-                # a.reward = float(a.level * food)
                 if self._normalize_reward:
                     a.reward = a.reward / float(
                         self._food_spawned
-                        # adj_player_level * self._food_spawned
                     )  # normalize reward
-            self.field[frow, fcol] = 0
+            self.field[frow, fcol] = 0  # Food is removed
 
         self._game_over = (
             self.field.sum() == 0 or self._max_episode_steps <= self.current_step
         )
         self._gen_valid_moves()
-
+        self.replenish_food(replenishment_rate=0.6, previous_field=self.field)
+        
         for p in self.players:
             p.score += p.reward
 

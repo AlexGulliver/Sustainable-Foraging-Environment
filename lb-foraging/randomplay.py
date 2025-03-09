@@ -10,10 +10,16 @@ import time
 
 def parse_args():
     parser = ArgumentParser()
+    # parser.add_argument(
+    #     "--env",
+    #     type=str,
+    #     default="Foraging-8x8-2p-6f-v3",
+    #     help="Environment to use",
+    # )
     parser.add_argument(
         "--env",
         type=str,
-        default="Foraging-8x8-2p-2f-v3",
+        default="SustainableForagingEnv-v0",
         help="Environment to use",
     )
     parser.add_argument(
@@ -67,7 +73,9 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-            for step in range(1):  # Run up to 100 steps per episode
+            for step in range(10):  # Run up to 100 steps per episode
+                # TODO: add replenish food function here
+                time.sleep(1)
                 actions = [np.random.choice(list(Action)) for _ in range(self.n_agents)]
                 obss, rews, done, trunc, _ = self.env.step([act.value for act in actions])
                 ep_returns += np.array(rews)
@@ -79,7 +87,7 @@ class VisualisedEnv:
 
                 if done or trunc:
                     break  # Stop episode if terminated early
-
+                    
             total_rewards += ep_returns  # Accumulate rewards
 
             if self.display_info:
