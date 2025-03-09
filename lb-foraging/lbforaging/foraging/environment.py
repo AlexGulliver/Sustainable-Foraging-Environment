@@ -417,7 +417,6 @@ class ForagingEnv(gym.Env):
                 )
                 <= 2 * self.sight
             ],
-            # todo also check max?
             field=np.copy(self.neighborhood(*player.position, self.sight)),
             game_over=self.game_over,
             sight=self.sight,
@@ -534,8 +533,8 @@ class ForagingEnv(gym.Env):
             # setting seed
             super().reset(seed=seed, options=options)
         
-        self.previousfield = self.field
-        print(self.previousfield, "PREVIOUS FIELD")
+        # self.previousfield = self.field
+        # print(self.previousfield, "PREVIOUS FIELD")
         self.field = np.zeros(self.field_size, np.int32)
         self.spawn_players()
 
@@ -624,9 +623,10 @@ class ForagingEnv(gym.Env):
         self._game_over = (
             self.field.sum() == 0 or self._max_episode_steps <= self.current_step
         )
-        self._gen_valid_moves()
         self.replenish_food(replenishment_rate=0.6, previous_field=self.field)
-        
+        self._gen_valid_moves()
+
+
         for p in self.players:
             p.score += p.reward
 

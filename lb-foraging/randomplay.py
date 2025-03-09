@@ -73,7 +73,7 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-            for step in range(10):  # Run up to 100 steps per episode
+            for step in range(15):  # Run up to 100 steps per episode
                 # TODO: add replenish food function here
                 time.sleep(1)
                 actions = [np.random.choice(list(Action)) for _ in range(self.n_agents)]
