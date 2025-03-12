@@ -197,18 +197,22 @@ class Viewer(object):
         batch = pyglet.graphics.Batch()
 
         for player in env.players:
-            row, col = player.position
-            players.append(
-                pyglet.sprite.Sprite(
-                    self.img_agent,
-                    (self.grid_size + 1) * col,
-                    self.height - (self.grid_size + 1) * (row + 1),
-                    batch=batch,
+            if player.controller and player.controller.energy > 0:  # ✅ Skip players with no energy
+                row, col = player.position
+                players.append(
+                    pyglet.sprite.Sprite(
+                        self.img_agent,
+                        (self.grid_size + 1) * col,
+                        self.height - (self.grid_size + 1) * (row + 1),
+                        batch=batch,
+                    )
                 )
-            )
+
         for p in players:
             p.update(scale=self.grid_size / p.width)
+        
         batch.draw()
+
         # for p in env.players:
         #     self._draw_badge(*p.position, p.level)
 

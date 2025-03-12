@@ -241,15 +241,26 @@ class ForagingEnv(gym.Env):
             + self.field[row, min(col + 1, self.cols - 1)]
         )
 
+    # def adjacent_food_location(self, row, col):
+    #     if row > 1 and self.field[row - 1, col] > 0:
+    #         return row - 1, col
+    #     elif row < self.rows - 1 and self.field[row + 1, col] > 0:
+    #         return row + 1, col
+    #     elif col > 1 and self.field[row, col - 1] > 0:
+    #         return row, col - 1
+    #     elif col < self.cols - 1 and self.field[row, col + 1] > 0:
+    #         return row, col + 1
+
     def adjacent_food_location(self, row, col):
-        if row > 1 and self.field[row - 1, col] > 0:
+        if row > 0 and self.field[row - 1, col] > 0:  # Allow row 0
             return row - 1, col
         elif row < self.rows - 1 and self.field[row + 1, col] > 0:
             return row + 1, col
-        elif col > 1 and self.field[row, col - 1] > 0:
+        elif col > 0 and self.field[row, col - 1] > 0:  # Allow col 0
             return row, col - 1
         elif col < self.cols - 1 and self.field[row, col + 1] > 0:
             return row, col + 1
+
 
     def adjacent_players(self, row, col):
         return [
@@ -602,6 +613,7 @@ class ForagingEnv(gym.Env):
         while loading_players:
             # find adjacent food
             player = loading_players.pop()
+            print(f"{player} loading player {player.position} player position")
             frow, fcol = self.adjacent_food_location(*player.position)
             food = self.field[frow, fcol]
 
@@ -623,7 +635,7 @@ class ForagingEnv(gym.Env):
         self._game_over = (
             self.field.sum() == 0 or self._max_episode_steps <= self.current_step
         )
-        self.replenish_food(replenishment_rate=0.6, previous_field=self.field)
+        self.replenish_food(replenishment_rate=0, previous_field=self.field)
         self._gen_valid_moves()
 
 
