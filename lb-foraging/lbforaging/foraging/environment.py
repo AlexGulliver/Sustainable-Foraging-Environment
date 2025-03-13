@@ -30,7 +30,8 @@ class Player:
         self.controller = None
         self.position = None
         self.field_size = None
-        self.score = None
+        self.previous_score = 0 
+        self.score = 0
         self.reward = 0
         self.history = None
         self.current_step = None
@@ -290,39 +291,6 @@ class ForagingEnv(gym.Env):
             food_count += 1
         self._food_spawned = self.field.sum()
 
-    # def spawn_food(self, replenishment_rate, max_num_food, previous_field):
-        
-    #     oldfield = previous_field
-    #     food_count = 0
-    #     attempts = 0
-
-    #     # If the entire field is empty, spawn max food
-    #     if np.all(oldfield == 0):
-    #         print("FULLHOUSE")
-    #         while food_count < max_num_food and attempts < 1000:
-    #             attempts += 1
-    #             row = self.np_random.integers(0, self.rows)
-    #             col = self.np_random.integers(0, self.cols)
-    #                         # check if it has neighbors:
-    #             if (not self._is_empty_location(row, col)):
-    #                 # print(f"Blocked location at ({row}, {col})")
-    #                 continue
-
-    #             self.field[row, col] = 1
-
-    #             food_count += 1
-    #         self._food_spawned = self.field.sum()
-    #     else:
-    #         # If the field is not entirely empty, try to spawn food in each empty cell with a probability of replenishment_rate
-    #         for row in range(self.rows):
-    #             for col in range(self.cols):
-    #                 if self._is_empty_location(row, col):
-    #                     if oldfield[row, col] == 0:
-    #                         if self.np_random.uniform() < replenishment_rate:
-    #                             self.field[row, col] = 1
-    #                             food_count += 1
-    #         self._food_spawned = self.field.sum()
-
     def replenish_food(self, replenishment_rate, previous_field):
         """Replenishes empty cells with food based on replenishment rate."""
         # If the field is not entirely empty, try to spawn food in each empty cell with a probability of replenishment_rate
@@ -563,15 +531,17 @@ class ForagingEnv(gym.Env):
     def step(self, actions):
         self.current_step += 1
 
+        # Reset rewards for each player at the beginning of the step
         for p in self.players:
             p.reward = 0
+            p.previous_score = p.score  # Update previous score at the start of the step
 
         actions = [
             Action(a) if Action(a) in self._valid_actions[p] else Action.NONE
             for p, a in zip(self.players, actions)
         ]
 
-        # check if actions are valid
+        # Check for invalid actions
         for i, (player, action) in enumerate(zip(self.players, actions)):
             if action not in self._valid_actions[player]:
                 self.logger.info(
@@ -583,11 +553,8 @@ class ForagingEnv(gym.Env):
 
         loading_players = set()
 
-        # move players
-        # if two or more players try to move to the same location they all fail
+        # Move players and check for collisions
         collisions = defaultdict(list)
-
-        # so check for collisions
         for player, action in zip(self.players, actions):
             if action == Action.NONE:
                 collisions[player.position].append(player)
@@ -603,44 +570,42 @@ class ForagingEnv(gym.Env):
                 collisions[player.position].append(player)
                 loading_players.add(player)
 
-        # and do movements for non colliding players
+        # Move non-colliding players
         for k, v in collisions.items():
-            if len(v) > 1:  # make sure no more than an player will arrive at location
+            if len(v) > 1:
                 continue
             v[0].position = k
 
-        # finally process the loadings:
+        # Process food loading and reward assignment
         while loading_players:
-            # find adjacent food
             player = loading_players.pop()
-            print(f"{player} loading player {player.position} player position")
             frow, fcol = self.adjacent_food_location(*player.position)
             food = self.field[frow, fcol]
 
             adj_players = self.adjacent_players(frow, fcol)
-            adj_players = [
-                p for p in adj_players if p in loading_players or p is player
-            ]
+            adj_players = [p for p in adj_players if p in loading_players or p is player]
 
             loading_players = loading_players - set(adj_players)
 
             for a in adj_players:
                 a.reward = float(food)
                 if self._normalize_reward:
-                    a.reward = a.reward / float(
-                        self._food_spawned
-                    )  # normalize reward
+                    a.reward = a.reward / float(self._food_spawned)
+                
+                # Immediately update score after reward assignment
+                a.score += a.reward
+
             self.field[frow, fcol] = 0  # Food is removed
 
-        self._game_over = (
-            self.field.sum() == 0 or self._max_episode_steps <= self.current_step
-        )
+        # Check if the game is over
+        self._game_over = (self.field.sum() == 0 or self._max_episode_steps <= self.current_step)
         self.replenish_food(replenishment_rate=0, previous_field=self.field)
         self._gen_valid_moves()
 
-
-        for p in self.players:
-            p.score += p.reward
+        # Verify food has been loaded to agents
+        for a in self.players:
+            if a.score > a.previous_score:
+                a.controller.notify_food_loaded(True)
 
         rewards = [p.reward for p in self.players]
         done = self._game_over
@@ -648,6 +613,7 @@ class ForagingEnv(gym.Env):
         info = self._get_info()
 
         return self._make_gym_obs(), rewards, done, truncated, info
+
 
     def _init_render(self):
         from .rendering import Viewer

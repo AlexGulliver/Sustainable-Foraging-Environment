@@ -40,7 +40,7 @@ class VisualisedEnv:
         # Initialize agents
         self.agents = [
             ForagingAgent(agent_params={
-                "eta": 0.5, "carry_capacity": 10, "survival_cost": 2, "tau": 0, "k": 1
+                "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
             }) for _ in range(self.n_agents)
         ]
 
@@ -74,12 +74,12 @@ class VisualisedEnv:
             # Respawn all agents with full energy
             self.agents = [
                 ForagingAgent(agent_params={
-                    "eta": 0.5, "carry_capacity": 10, "survival_cost": 2, "tau": 0, "k": 1
+                    "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
                 }) for _ in range(self.n_agents)
             ]
 
             for player, agent in zip(self.env.unwrapped.players, self.agents):
-                print(f"Assigning {agent} to {player}")  # Debugging
+                print(f"Assigning {agent} to {player}")
                 player.set_controller(agent)
 
             self.env.render()
@@ -87,7 +87,7 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-            for step in range(15):  # Run up to 100 steps per episode
+            for step in range(100):  # Run up to 100 steps per episode
                 time.sleep(1)
 
                 # Remove dead agents before taking actions

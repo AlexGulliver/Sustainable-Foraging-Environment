@@ -6,24 +6,26 @@ import numpy as np
 class ForagingAgent(BaseAgent):
     name = "Foraging Agent"
 
-
     def __init__(self, agent_params):
         eta, self.carry_capacity, self.survival_cost, self.tau, self.k = tuple(agent_params.values())
-        self.energy = 5  # Initial energy level 
+        self.movement_cost = 1
+        self.food_value = 1
+        self.energy = 5  # Initial energy level
         self.tau = 0  # Moderate agent collection threshold
+        self.invalid_action = False  # Flag to track invalid action
+
+    def notify_food_loaded(self, food_loaded):
+        if food_loaded:
+            self.energy += self.food_value
+            print(f"Energy level increased by {self.food_value}")
+        else:
+            pass
 
 
     def step(self, obs):
-        print(f"{self.energy} ENERGY LEVEL")
-        action = np.random.choice(list(Action))  # ✅ Correct: Returns a single Action object
+        print(f"Current energy level: {self.energy}")
 
-
-        if action in [Action.NORTH, Action.SOUTH, Action.EAST, Action.WEST]:
-            self.energy -= self.survival_cost
-
-        if action == Action.LOAD:
-            # if obs["food_collected"].get(self.id, False):  # Check if agent successfully loaded food
-            #     self.energy += self.carry_capacity
-            pass
+        action = np.random.choice(list(Action))  # Choose an action randomly
 
         return action
+
