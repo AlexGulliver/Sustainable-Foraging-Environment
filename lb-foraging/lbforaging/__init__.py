@@ -46,7 +46,7 @@ register(
     id="SustainableForagingEnv-v0",
     entry_point="lbforaging.foraging:ForagingEnv",
     kwargs={
-        "players": 2,
+        "players": 8,
         "field_size": (8, 8),
         "min_player_level": 1,
         "max_player_level": 2,

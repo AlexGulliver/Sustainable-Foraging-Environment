@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import gymnasium as gym
 from lbforaging.foraging.environment import Action
-from lbforaging.agents.foragingagent import ForagingAgent
+from lbforaging.agents.randomagent import RandomForagingAgent  # Import the new random agent
 import pyglet
 import time
 import matplotlib.pyplot as plt  # Import matplotlib for plotting
@@ -36,9 +36,9 @@ class VisualisedEnv:
         self.n_agents = self.env.unwrapped.n_agents
         self.display_info = display_info
 
-        # Initialize agents
+        # Initialize agents with RandomForagingAgent
         self.agents = [
-            ForagingAgent(agent_params={
+            RandomForagingAgent(agent_params={
                 "eta": 0.5, "carry_capacity": 10, "survival_cost": 0.5, "tau": 0, "k": 1
             }) for _ in range(self.n_agents)
         ]
@@ -78,7 +78,7 @@ class VisualisedEnv:
 
             # Respawn all agents with full energy
             self.agents = [
-                ForagingAgent(agent_params={
+                RandomForagingAgent(agent_params={
                     "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
                 }) for _ in range(self.n_agents)
             ]

@@ -588,12 +588,17 @@ class ForagingEnv(gym.Env):
             loading_players = loading_players - set(adj_players)
 
             for a in adj_players:
-                a.reward = float(food)
-                if self._normalize_reward:
-                    a.reward = a.reward / float(self._food_spawned)
+                print(f"{a.controller.energy} CONTROLLER ENERGY")
+
+                # Reward based on energy gain (UNNORMALIZED)
+                energy_before = a.controller.energy
+                a.controller.energy += float(food)  # Assuming 'energy' is a field in controller
                 
+                energy_gain = a.controller.energy - energy_before
+                a.reward = energy_gain  # No normalization here
+
                 # Immediately update score after reward assignment
-                a.score += a.reward
+                a.score += a.reward  
 
             self.field[frow, fcol] = 0  # Food is removed
 
@@ -613,6 +618,7 @@ class ForagingEnv(gym.Env):
         info = self._get_info()
 
         return self._make_gym_obs(), rewards, done, truncated, info
+
 
 
     def _init_render(self):
