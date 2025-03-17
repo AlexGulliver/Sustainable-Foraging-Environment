@@ -3,7 +3,8 @@ import warnings
 import numpy as np
 import gymnasium as gym
 from lbforaging.foraging.environment import Action
-from lbforaging.agents.foragingagent import ForagingAgent
+from lbforaging.agents.qlearningagent import QLearningForagingAgent
+from lbforaging.agents.randomagent import RandomForagingAgent
 import pyglet
 import time
 import matplotlib.pyplot as plt  # Import matplotlib for plotting
@@ -38,7 +39,7 @@ class VisualisedEnv:
 
         # Initialize agents
         self.agents = [
-            ForagingAgent(agent_params={
+            QLearningForagingAgent(agent_params={
                 "eta": 0.5, "carry_capacity": 10, "survival_cost": 0.5, "tau": 0, "k": 1
             }) for _ in range(self.n_agents)
         ]
@@ -52,12 +53,13 @@ class VisualisedEnv:
             print("Warning: Viewer not initialized. Keyboard input may not work.")
 
         self.energy_history = [[] for _ in range(self.n_agents)]  # Track energy for agents
-        
-        # Add structures to track rewards over time
-        self.episode_rewards = [[] for _ in range(self.n_agents)]  # Rewards per episode for each agent
-        self.avg_episode_rewards = []  # Average rewards across all agents per episode
-        self.cumulative_rewards = np.zeros(self.n_agents)  # Track cumulative rewards
+        self.episode_rewards = [[] for _ in range(self.n_agents)]
+        self.avg_episode_rewards = []
+        self.episode_lengths = []
+        self.cumulative_rewards = np.zeros(self.n_agents) 
+        self.max_timesteps = max_steps  # Set max_timesteps to max_steps (given as argument)
 
+        # Run the episodes
         self._run_episodes(num_episodes=50)
 
     def _key_press(self, k, mod):
@@ -67,7 +69,6 @@ class VisualisedEnv:
             self.env.close()
 
     def _run_episodes(self, num_episodes=1):
-        """Runs the environment for a specified number of episodes."""
         total_rewards = np.zeros(self.n_agents)
 
         for episode in range(num_episodes):
@@ -78,7 +79,7 @@ class VisualisedEnv:
 
             # Respawn all agents with full energy
             self.agents = [
-                ForagingAgent(agent_params={
+                QLearningForagingAgent(agent_params={
                     "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
                 }) for _ in range(self.n_agents)
             ]
@@ -92,10 +93,10 @@ class VisualisedEnv:
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-            for step in range(100):  # Run up to 100 steps per episode
+            for step in range(100): 
                 # Remove dead agents before taking actions
                 self.agents = [agent for agent in self.agents if agent.energy > 0]
-                if not self.agents:  # If all agents are dead, end the episode
+                if not self.agents:  # If all agents are dead, end the episode early
                     print("All agents have died. Ending episode early.")
                     break
 
@@ -150,17 +151,32 @@ class VisualisedEnv:
         time.sleep(15)
         self.env.close()
 
+
+    def _pad_energy_history(self):
+        """Pads energy histories with 0s for agents that died early."""
+        padded_energy_history = []
+        for energy in self.energy_history:
+            # If energy history is shorter than max_timesteps, pad with 0s
+            if len(energy) < self.max_timesteps:
+                padded_energy = np.pad(energy, (0, self.max_timesteps - len(energy)), mode='constant', constant_values=0)
+            else:
+                padded_energy = energy[:self.max_timesteps]
+            padded_energy_history.append(padded_energy)
+        return padded_energy_history
+
     def _plot_energy(self):
         """Plots the energy levels of agents and average energy over time."""
         plt.figure(figsize=(10, 5))
 
+        # Pad the energy histories before plotting
+        padded_energy_history = self._pad_energy_history()
+
         # Plot energy levels for each agent
-        for i, energy in enumerate(self.energy_history):
+        for i, energy in enumerate(padded_energy_history):
             plt.plot(energy, label=f'Agent {i + 1}')
 
         # Calculate average energy at each timestep
-        max_timesteps = max(len(energy) for energy in self.energy_history)
-        avg_energy = np.mean([np.array(energy)[:max_timesteps] for energy in self.energy_history], axis=0)
+        avg_energy = np.mean(padded_energy_history, axis=0)
 
         # Plot average energy level
         plt.plot(avg_energy, label='Average Energy', color='black', linestyle='--', linewidth=2)

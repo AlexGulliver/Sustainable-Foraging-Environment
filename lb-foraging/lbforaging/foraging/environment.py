@@ -78,10 +78,10 @@ class ForagingEnv(gym.Env):
     def __init__(
         self,
         players,
-        min_player_level,
-        max_player_level,
-        min_food_level,
-        max_food_level,
+        # min_player_level,
+        # max_player_level,
+        # min_food_level,
+        # max_food_level,
         field_size,
         max_num_food,
         sight,
@@ -152,7 +152,7 @@ class ForagingEnv(gym.Env):
         # print("len(min_obs):", len(min_obs))
         # print("len(max_obs):", len(max_obs))
         # print("min_obs:", min_obs)
-        # print("max_obs:", max_obs)
+        # print("max_obs:", max_obs
 
         low_obs = np.array(min_obs)
         high_obs = np.array(max_obs)
@@ -241,16 +241,6 @@ class ForagingEnv(gym.Env):
             + self.field[row, max(col - 1, 0)]
             + self.field[row, min(col + 1, self.cols - 1)]
         )
-
-    # def adjacent_food_location(self, row, col):
-    #     if row > 1 and self.field[row - 1, col] > 0:
-    #         return row - 1, col
-    #     elif row < self.rows - 1 and self.field[row + 1, col] > 0:
-    #         return row + 1, col
-    #     elif col > 1 and self.field[row, col - 1] > 0:
-    #         return row, col - 1
-    #     elif col < self.cols - 1 and self.field[row, col + 1] > 0:
-    #         return row, col + 1
 
     def adjacent_food_location(self, row, col):
         if row > 0 and self.field[row - 1, col] > 0:  # Allow row 0
@@ -618,8 +608,6 @@ class ForagingEnv(gym.Env):
         info = self._get_info()
 
         return self._make_gym_obs(), rewards, done, truncated, info
-
-
 
     def _init_render(self):
         from .rendering import Viewer

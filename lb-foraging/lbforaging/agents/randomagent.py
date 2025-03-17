@@ -1,43 +1,43 @@
 import random
-from lbforaging.agents import BaseAgent
+from lbforaging.agents.foragingagent import BaseForagingAgent
 from lbforaging.foraging.environment import Action
-from lbforaging.agents.foragingagent import ForagingAgent
 import numpy as np
 
-class RandomForagingAgent(ForagingAgent):
-    name = "Random Foraging Agent"
+class RandomForagingAgent(BaseForagingAgent):
+    """Foraging Agent that chooses actions randomly"""
 
     def __init__(self, agent_params):
-        super().__init__(agent_params)  # Inherit from ForagingAgent
-        # You can customize further parameters or logic specific to the random agent here.
+        super().__init__(agent_params)
+        self.q_table = {}  # Q-table is no longer needed for random agent
+
+    def get_state(self, obs):
+        # Simple state representation based on energy
+        return int(self.energy)
 
     def choose_action(self, state):
-        # Override the choose_action method to always choose a random action
+        # Randomly choose an action from the available actions
         return np.random.choice(list(Action))
 
     def step(self, obs):
-        # Inherited step method, but will choose random actions instead of using Q-learning
+        # Get the current state
         state = self.get_state(obs)
 
-        # Choose action randomly
+        # Choose a random action
         action = self.choose_action(state)
         print(f"Chosen action: {action}")
 
-        # Perform action and update energy level (simplified for now)
+        # Perform action and update the energy level (simplified for now)
         self.energy -= self.survival_cost  # Deduct survival cost
 
-        # Assuming reward is simply the food value when food is loaded (you can modify this logic)
-        food_loaded = True  # This should be determined by the environment, simplified for now
+        # Assuming food loading logic is simplified for now
+        food_loaded = random.choice([True, False])  # Randomly decide if food is loaded
         if food_loaded:
             self.energy += self.food_value
             reward = self.food_value
         else:
             reward = -self.survival_cost  # Penalize for survival cost without food
 
-        # Get the next state
-        next_state = self.get_state(obs)
-
-        # Show progress (no Q-learning update in this version)
-        print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
+        # Show agent's current status
+        print(f"Energy level: {self.energy}, Reward: {reward}, State: {state}")
 
         return action
