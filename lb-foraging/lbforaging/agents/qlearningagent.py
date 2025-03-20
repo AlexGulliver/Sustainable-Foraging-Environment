@@ -15,7 +15,7 @@ class QLearningForagingAgent(BaseForagingAgent):
         self.q_table = {}  # Q-table (state-action value)
 
     def get_state(self, obs):
-        return (self.energy, self.position)
+        return tuple(obs)
 
     def update_q_value(self, state, action, reward, next_state):
         if state not in self.q_table:
@@ -40,8 +40,9 @@ class QLearningForagingAgent(BaseForagingAgent):
 
     def step(self, obs):
         state = self.get_state(obs)
+        print(f"AGENT POSITION {self.position}")
         action = self.choose_action(state)
-        print(f"Chosen action: {action}")
+        # print(f"Chosen action: {action}")
 
         self.energy -= self.survival_cost  # Deduct survival cost
 
@@ -51,7 +52,7 @@ class QLearningForagingAgent(BaseForagingAgent):
         self.update_q_value(state, action, reward, next_state)
 
         print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
-        print(f"Updated Q-table: {self.q_table}")
+        # print(f"Updated Q-table: {self.q_table}")
 
         return action
 

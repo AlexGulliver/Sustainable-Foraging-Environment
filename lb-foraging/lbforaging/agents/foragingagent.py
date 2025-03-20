@@ -8,9 +8,9 @@ class BaseForagingAgent(BaseAgent, ABC):
     def __init__(self, agent_params):
         self.name = "Base Foraging Agent"
         self.energy = 10  # Initial energy level
-        self.position = agent_params.get('position', (0, 0))
+        self.position = None 
         self.survival_cost = agent_params.get('survival_cost', 1)  # Default value
-        self.food_value = 1
+        self.food_value = 2
         self.movement_cost = 1
         self.carry_capacity = agent_params.get('carry_capacity', 1)
         self.tau = agent_params.get('tau', 0)

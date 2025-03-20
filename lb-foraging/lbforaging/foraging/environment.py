@@ -78,10 +78,6 @@ class ForagingEnv(gym.Env):
     def __init__(
         self,
         players,
-        # min_player_level,
-        # max_player_level,
-        # min_food_level,
-        # max_food_level,
         field_size,
         max_num_food,
         sight,
@@ -176,10 +172,6 @@ class ForagingEnv(gym.Env):
 
         env = cls(
             players,
-            min_player_level=1,
-            max_player_level=2,
-            min_food_level=1,
-            max_food_level=None,
             field_size=None,
             max_num_food=None,
             sight=None,
@@ -264,7 +256,6 @@ class ForagingEnv(gym.Env):
         ]
 
     def spawn_food(self, max_num_food):
-
         food_count = 0
         attempts = 0
         while food_count < max_num_food and attempts < 1000:
@@ -281,9 +272,10 @@ class ForagingEnv(gym.Env):
             food_count += 1
         self._food_spawned = self.field.sum()
 
-    def replenish_food(self, replenishment_rate, previous_field):
+    def replenish_food(self, replenishment_rate, previous_field, max_food):
         """Replenishes empty cells with food based on replenishment rate."""
         # If the field is not entirely empty, try to spawn food in each empty cell with a probability of replenishment_rate
+        # TODO: Make sure only max-food items are available on the field
         food_count= 0
         for row in range(self.rows):
             for col in range(self.cols):
@@ -304,7 +296,6 @@ class ForagingEnv(gym.Env):
         return True
 
     def spawn_players(self):
-        # player_permutation = self.np_random.permutation(len(self.players))
         for player in self.players:
             attempts = 0
             player.reward = 0
@@ -319,6 +310,10 @@ class ForagingEnv(gym.Env):
                     )
                     break
                 attempts += 1
+
+    def spawn_players_set_positions(self):
+        #TODO: Implement this method so players spawn in the same position in the grid each time
+        pass
 
     def _is_valid_action(self, player, action):
         if action == Action.NONE:
@@ -500,14 +495,16 @@ class ForagingEnv(gym.Env):
     def reset(self, seed=None, options=None):
         if seed is not None:
             # setting seed
-            super().reset(seed=seed, options=options)
-        
+            super().reset(seed=seed, options=options) 
         # self.previousfield = self.field
         # print(self.previousfield, "PREVIOUS FIELD")
         self.field = np.zeros(self.field_size, np.int32)
         self.spawn_players()
 
-        self.spawn_food(max_num_food=65)
+        # for a in self.players:
+        #     a.controller.position = a.position
+
+        self.spawn_food(max_num_food=64)
         # print("Field after spawning food:")
         # print(self.field)
 
@@ -581,11 +578,9 @@ class ForagingEnv(gym.Env):
                 print(f"{a.controller.energy} CONTROLLER ENERGY")
 
                 # Reward based on energy gain (UNNORMALIZED)
-                energy_before = a.controller.energy
-                a.controller.energy += float(food)  # Assuming 'energy' is a field in controller
-                
-                energy_gain = a.controller.energy - energy_before
-                a.reward = energy_gain  # No normalization here
+                # a.controller.energy += float(food)
+                a.controller.energy += 2
+
 
                 # Immediately update score after reward assignment
                 a.score += a.reward  
@@ -593,14 +588,17 @@ class ForagingEnv(gym.Env):
             self.field[frow, fcol] = 0  # Food is removed
 
         # Check if the game is over
-        self._game_over = (self.field.sum() == 0 or self._max_episode_steps <= self.current_step)
-        self.replenish_food(replenishment_rate=0, previous_field=self.field)
+        # self._game_over = (self.field.sum() == 0 or self._max_episode_steps <= self.current_step)
+        self._game_over = (self._max_episode_steps <= self.current_step)
+        self.replenish_food(replenishment_rate=1, previous_field=self.field, max_food=self.max_num_food)
         self._gen_valid_moves()
 
         # Verify food has been loaded to agents
         for a in self.players:
             if a.score > a.previous_score:
                 a.controller.notify_food_loaded(True)
+            a.reward = a.controller.energy  # Assign reward based on energy level
+            a.controller.position = a.position 
 
         rewards = [p.reward for p in self.players]
         done = self._game_over

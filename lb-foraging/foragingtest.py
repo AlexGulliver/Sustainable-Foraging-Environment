@@ -5,9 +5,10 @@ import gymnasium as gym
 from lbforaging.foraging.environment import Action
 from lbforaging.agents.qlearningagent import QLearningForagingAgent
 from lbforaging.agents.randomagent import RandomForagingAgent
+from lbforaging.agents.deepqagent import DeepQLearningForagingAgent
 import pyglet
 import time
-import matplotlib.pyplot as plt  # Import matplotlib for plotting
+import matplotlib.pyplot as plt
 
 def parse_args():
     parser = ArgumentParser()
@@ -39,7 +40,7 @@ class VisualisedEnv:
 
         # Initialize agents
         self.agents = [
-            QLearningForagingAgent(agent_params={
+            RandomForagingAgent(agent_params={
                 "eta": 0.5, "carry_capacity": 10, "survival_cost": 0.5, "tau": 0, "k": 1
             }) for _ in range(self.n_agents)
         ]
@@ -59,14 +60,15 @@ class VisualisedEnv:
         self.cumulative_rewards = np.zeros(self.n_agents) 
         self.max_timesteps = max_steps  # Set max_timesteps to max_steps (given as argument)
 
-        # Run the episodes
-        self._run_episodes(num_episodes=50)
+        self._run_episodes(num_episodes=100)
+
 
     def _key_press(self, k, mod):
         from pyglet.window import key
         if k == key.ESCAPE:
             self.running = False
             self.env.close()
+
 
     def _run_episodes(self, num_episodes=1):
         total_rewards = np.zeros(self.n_agents)
@@ -79,7 +81,7 @@ class VisualisedEnv:
 
             # Respawn all agents with full energy
             self.agents = [
-                QLearningForagingAgent(agent_params={
+                RandomForagingAgent(agent_params={
                     "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
                 }) for _ in range(self.n_agents)
             ]
@@ -121,6 +123,7 @@ class VisualisedEnv:
                     print(f"Step {step + 1}: Rewards {rews}")
 
                 self.env.render()
+                # time.sleep(0.5)
 
                 if done or trunc:
                     break  # Stop episode if terminated early
@@ -164,6 +167,7 @@ class VisualisedEnv:
             padded_energy_history.append(padded_energy)
         return padded_energy_history
 
+
     def _plot_energy(self):
         """Plots the energy levels of agents and average energy over time."""
         plt.figure(figsize=(10, 5))
@@ -188,7 +192,8 @@ class VisualisedEnv:
         plt.grid(True)
         plt.savefig('energy_levels.png')  # Save the figure
         plt.show()
-    
+
+
     def _plot_rewards(self):
         """Plots the rewards over episodes and average rewards trend."""
         plt.figure(figsize=(12, 8))

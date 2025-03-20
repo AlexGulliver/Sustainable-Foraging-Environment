@@ -64,4 +64,3 @@ class BaseAgent:
 
     def cleanup(self):
         pass
-

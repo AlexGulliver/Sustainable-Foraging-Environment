@@ -8,36 +8,25 @@ class RandomForagingAgent(BaseForagingAgent):
 
     def __init__(self, agent_params):
         super().__init__(agent_params)
-        self.q_table = {}  # Q-table is no longer needed for random agent
 
     def get_state(self, obs):
-        # Simple state representation based on energy
-        return int(self.energy)
+        return tuple(obs) 
 
     def choose_action(self, state):
         # Randomly choose an action from the available actions
         return np.random.choice(list(Action))
 
     def step(self, obs):
-        # Get the current state
         state = self.get_state(obs)
-
-        # Choose a random action
+        print(f"AGENT POSITION {self.position}")
         action = self.choose_action(state)
-        print(f"Chosen action: {action}")
+        # print(f"Chosen action: {action}")
 
-        # Perform action and update the energy level (simplified for now)
         self.energy -= self.survival_cost  # Deduct survival cost
 
-        # Assuming food loading logic is simplified for now
-        food_loaded = random.choice([True, False])  # Randomly decide if food is loaded
-        if food_loaded:
-            self.energy += self.food_value
-            reward = self.food_value
-        else:
-            reward = -self.survival_cost  # Penalize for survival cost without food
+        reward = self.energy  # Reward is the agent's current energy level
+        next_state = self.get_state(obs)
 
-        # Show agent's current status
-        print(f"Energy level: {self.energy}, Reward: {reward}, State: {state}")
+        print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
 
         return action
