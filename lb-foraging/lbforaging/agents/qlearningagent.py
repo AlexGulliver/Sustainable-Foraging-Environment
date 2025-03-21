@@ -11,7 +11,7 @@ class QLearningForagingAgent(BaseForagingAgent):
         # Q-learning parameters
         self.alpha = 0.1  # Learning rate
         self.gamma = 0.9  # Discount factor
-        self.epsilon = 0.1  # Exploration rate
+        self.epsilon = 0.05  # Exploration rate
         self.q_table = {}  # Q-table (state-action value)
 
     def get_state(self, obs):

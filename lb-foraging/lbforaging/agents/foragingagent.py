@@ -18,11 +18,6 @@ class BaseForagingAgent(BaseAgent, ABC):
         self.invalid_action = False
 
     @abstractmethod
-    def get_state(self, obs):
-        """Abstract method to get the state representation."""
-        pass
-
-    @abstractmethod
     def step(self, obs):
         """Abstract method to define a step of the agent's decision-making."""
         pass
