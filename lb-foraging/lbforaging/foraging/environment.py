@@ -590,7 +590,7 @@ class ForagingEnv(gym.Env):
         # Check if the game is over
         # self._game_over = (self.field.sum() == 0 or self._max_episode_steps <= self.current_step)
         self._game_over = (self._max_episode_steps <= self.current_step)
-        self.replenish_food(replenishment_rate=1, previous_field=self.field, max_food=self.max_num_food)
+        self.replenish_food(replenishment_rate=0.5, previous_field=self.field, max_food=self.max_num_food)
         self._gen_valid_moves()
 
         # Verify food has been loaded to agents

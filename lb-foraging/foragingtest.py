@@ -30,23 +30,36 @@ def parse_args():
         action="store_true",
         help="Display agent info per step",
     )
+    parser.add_argument(
+        "--agent_type",
+        type=str,
+        default="curious_dqn",
+        choices=["random", "qlearning", "dqn", "curious_dqn"],
+        help="Type of agent to use",
+    )
     return parser.parse_args()
 
 
 class VisualisedEnv:
-    def __init__(self, env: str, max_steps: int, display_info: bool = True):
+    def __init__(self, env: str, max_steps: int, num_episodes: int, agent_type: str, display_info: bool = True):
+
         self.env = gym.make(env, render_mode="human", max_episode_steps=max_steps)
         self.n_agents = self.env.unwrapped.n_agents
         self.display_info = display_info
-
         self.episode_lengths = []
+        self.agent_type = agent_type
+        self.max_timesteps = max_steps
 
-        # # Initialize agents
-        # self.agents = [
-        #     RandomForagingAgent(agent_params={
-        #         "eta": 0.5, "carry_capacity": 10, "survival_cost": 0.5, "tau": 0, "k": 1
-        #     }) for _ in range(self.n_agents)
-        # ]
+        # Parameters
+        self.agent_params = {
+            "eta": 0.5, 
+            "carry_capacity": 10, 
+            "survival_cost": 1,
+            "tau": 0, 
+            "k": 1
+        }
+
+        # self.agents = self._create_agents()
 
         obss, _ = self.env.reset()
         self.env.render()
@@ -56,13 +69,28 @@ class VisualisedEnv:
         else:
             print("Warning: Viewer not initialized. Keyboard input may not work.")
 
+        # Data collection
         self.episode_rewards = [[] for _ in range(self.n_agents)]
         self.avg_episode_rewards = []
         self.episode_lengths = []
         self.cumulative_rewards = np.zeros(self.n_agents) 
-        self.max_timesteps = max_steps  # Set max_timesteps to max_steps (given as argument)
 
-        self._run_episodes(num_episodes=100)
+        self._run_episodes(num_episodes=num_episodes)
+
+
+    def _create_agents(self):
+        """Create agents based on the selected agent type."""
+        if self.agent_type == "random":
+            return [RandomForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+        elif self.agent_type == "qlearning":
+            return [QLearningForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+        elif self.agent_type == "dqn":
+            return [DeepQLearningForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+        elif self.agent_type == "curious_dqn":
+            return [CuriosityDrivenDQNAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+        else:
+            print(f"Unknown agent type: {self.agent_type}, defaulting to Curious DQN")
+            return [CuriosityDrivenDQNAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
 
 
     def _key_press(self, k, mod):
@@ -76,29 +104,28 @@ class VisualisedEnv:
         total_rewards = np.zeros(self.n_agents)
 
         for episode in range(num_episodes):
-            ep_returns = np.zeros(self.n_agents)  # Reset episode rewards
+
+            # Reset episode rewards and length
+            ep_returns = np.zeros(self.n_agents)
             ep_length = 0
+
             # Reset the environment
             obss, _ = self.env.reset()
 
-            # Respawn all agents with full energy
-            self.agents = [
-                CuriosityDrivenDQNAgent(agent_params={
-                    "eta": 0.5, "carry_capacity": 10, "survival_cost": 1, "tau": 0, "k": 1
-                }) for _ in range(self.n_agents)
-            ]
+            self.agents=self._create_agents()
 
-            for player, agent in zip(self.env.unwrapped.players, self.agents):
-                print(f"Assigning {agent} to {player}")
+            for i, (player, agent) in enumerate(zip(self.env.unwrapped.players, self.agents)):
                 player.set_controller(agent)
+                # Initialize agent position to match player position
+                agent.position = player.position
+                agent.energy = 10  # Set initial energy
 
             self.env.render()
 
             if self.display_info:
                 print(f"Episode {episode + 1} begins.")
 
-
-            for step in range(100): 
+            for step in range(self.max_timesteps): 
                 # Remove dead agents before taking actions
                 self.agents = [agent for agent in self.agents if agent.energy > 0]
                 if not self.agents:  # If all agents are dead, end the episode early
@@ -153,7 +180,7 @@ class VisualisedEnv:
 
         self._plot_episode_lengths(self.episode_lengths)
 
-        time.sleep(15)
+        # time.sleep(0.5)
         self.env.close()
 
     def _plot_rewards(self):
@@ -217,4 +244,4 @@ class VisualisedEnv:
 
 if __name__ == "__main__":
     args = parse_args()
-    VisualisedEnv(env=args.env, display_info=True, max_steps=args.max_steps)
+    VisualisedEnv(env=args.env, display_info=True, max_steps=100, num_episodes=100, agent_type="qlearning")

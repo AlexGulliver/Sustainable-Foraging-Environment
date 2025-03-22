@@ -27,6 +27,7 @@ class RandomForagingAgent(BaseForagingAgent):
         reward = self.energy  # Reward is the agent's current energy level
         next_state = self.get_state(obs)
 
-        print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
+        print(f"Energy level: {self.energy}, Reward: {reward}")
+        # print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
 
         return action

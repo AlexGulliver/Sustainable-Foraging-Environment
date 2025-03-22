@@ -50,7 +50,7 @@ register(
         "field_size": (4, 4),
         "max_num_food": 64,
         "sight": 2,
-        "max_episode_steps": 50,
+        "max_episode_steps": 100,
         "grid_observation": False,
         "penalty": 0.1,
         "force_coop": False,

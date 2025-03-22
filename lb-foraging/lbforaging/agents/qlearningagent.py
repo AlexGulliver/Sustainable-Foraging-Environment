@@ -51,7 +51,8 @@ class QLearningForagingAgent(BaseForagingAgent):
 
         self.update_q_value(state, action, reward, next_state)
 
-        print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
+        print(f"Energy level: {self.energy}, Reward: {reward}")
+        # print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
         # print(f"Updated Q-table: {self.q_table}")
 
         return action
