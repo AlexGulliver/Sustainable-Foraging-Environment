@@ -16,6 +16,7 @@ class BaseForagingAgent(BaseAgent, ABC):
         self.tau = agent_params.get('tau', 0)
         self.k = agent_params.get('k', 0)
         self.invalid_action = False
+        self.reward = 0
 
     @abstractmethod
     def step(self, obs):

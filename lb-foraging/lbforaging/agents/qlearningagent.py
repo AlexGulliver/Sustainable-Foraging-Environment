@@ -37,23 +37,43 @@ class QLearningForagingAgent(BaseForagingAgent):
             if state not in self.q_table:
                 return np.random.choice(list(Action))
             return max(self.q_table[state], key=self.q_table[state].get)
+        
+    def receive_reward(self, reward):
+        self.reward = reward
 
     def step(self, obs):
-        state = self.get_state(obs)
-        print(f"AGENT POSITION {self.position}")
-        action = self.choose_action(state)
-        # print(f"Chosen action: {action}")
-
-        self.energy -= self.survival_cost  # Deduct survival cost
-
-        reward = self.energy  # Reward is the agent's current energy level
-        next_state = self.get_state(obs)
-
-        self.update_q_value(state, action, reward, next_state)
-
-        print(f"Energy level: {self.energy}, Reward: {reward}")
-        # print(f"Energy level: {self.energy}, Reward: {reward}, Next state: {next_state}")
-        # print(f"Updated Q-table: {self.q_table}")
-
+        current_state = self.get_state(obs)
+        
+        # Choose action based on current state
+        action = self.choose_action(current_state)
+        
+        # Store current state for next update
+        self.current_state = current_state
+        self.last_action = action
+        
+        # Deduct survival cost
+        self.energy -= self.survival_cost
+        
+        print(f"AGENT Position: {self.position}, Energy: {self.energy}")
+        
         return action
+
+    def receive_reward(self, reward):
+        # This method is called by the environment after taking an action
+        self.reward = reward
+        
+        # If we have previous state and action, update Q-value
+        if hasattr(self, 'current_state') and hasattr(self, 'last_action'):
+            # Get new state from the current observation
+            next_state = self.current_state  # You might need to update this
+            
+            # Update Q-value with the received reward
+            self.update_q_value(
+                self.current_state, 
+                self.last_action, 
+                reward, 
+                next_state
+            )
+            
+            # print(f"Received reward: {reward}, Updated Q-value for state {self.current_state}, action {self.last_action}")
 

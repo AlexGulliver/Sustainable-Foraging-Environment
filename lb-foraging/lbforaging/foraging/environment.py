@@ -7,6 +7,7 @@ from typing import Iterable
 import gymnasium as gym
 from gymnasium.utils import seeding
 import numpy as np
+import math
 
 class Action(Enum):
     NONE = 0
@@ -235,11 +236,11 @@ class ForagingEnv(gym.Env):
         )
 
     def adjacent_food_location(self, row, col):
-        if row > 0 and self.field[row - 1, col] > 0:  # Allow row 0
+        if row > 0 and self.field[row - 1, col] > 0:
             return row - 1, col
         elif row < self.rows - 1 and self.field[row + 1, col] > 0:
             return row + 1, col
-        elif col > 0 and self.field[row, col - 1] > 0:  # Allow col 0
+        elif col > 0 and self.field[row, col - 1] > 0:
             return row, col - 1
         elif col < self.cols - 1 and self.field[row, col + 1] > 0:
             return row, col + 1
@@ -590,15 +591,22 @@ class ForagingEnv(gym.Env):
         # Check if the game is over
         # self._game_over = (self.field.sum() == 0 or self._max_episode_steps <= self.current_step)
         self._game_over = (self._max_episode_steps <= self.current_step)
-        self.replenish_food(replenishment_rate=0.5, previous_field=self.field, max_food=self.max_num_food)
+        self.replenish_food(replenishment_rate=1, previous_field=self.field, max_food=self.max_num_food)
         self._gen_valid_moves()
 
         # Verify food has been loaded to agents
         for a in self.players:
             if a.score > a.previous_score:
                 a.controller.notify_food_loaded(True)
-            a.reward = a.controller.energy  # Assign reward based on energy level
-            a.controller.position = a.position 
+
+            # REWARD FUNCTION
+            if a.controller.energy > 0:
+                # a.reward = 10 * math.log(a.controller.energy)
+                a.reward = math.log(a.controller.energy)
+            else:
+                a.reward = 0  # Assign 0 reward if energy is zero
+            
+            a.controller.receive_reward(a.reward)
 
         rewards = [p.reward for p in self.players]
         done = self._game_over

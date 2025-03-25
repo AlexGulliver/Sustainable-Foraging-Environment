@@ -195,7 +195,7 @@ class VisualisedEnv:
             plt.plot(range(1, len(rewards) + 1), rewards, marker='o', label=f'Agent {i + 1}')
             
         plt.plot(range(1, len(self.avg_episode_rewards) + 1), self.avg_episode_rewards, 
-                 color='black', linestyle='--', linewidth=2, marker='s', label='Average Reward')
+                color='black', linestyle='--', linewidth=2, marker='s', label='Average Reward Per Episode')
         
         plt.xlabel('Episode')
         plt.ylabel('Reward')
@@ -203,18 +203,18 @@ class VisualisedEnv:
         plt.legend()
         plt.grid(True)
         
-        # Create subplot for cumulative rewards
+        # Create subplot for running average of episodic rewards
         plt.subplot(2, 1, 2)
         
-        # Calculate cumulative average reward
-        cum_avg_reward = np.cumsum(self.avg_episode_rewards) / np.arange(1, len(self.avg_episode_rewards) + 1)
+        # Calculate running average of episodic rewards
+        running_avg_reward = np.cumsum(self.avg_episode_rewards) / np.arange(1, len(self.avg_episode_rewards) + 1)
         
-        plt.plot(range(1, len(self.avg_episode_rewards) + 1), cum_avg_reward, 
-                 color='green', linestyle='-', linewidth=2, marker='d', label='Cumulative Average Reward')
+        plt.plot(range(1, len(self.avg_episode_rewards) + 1), running_avg_reward, 
+                color='green', linestyle='-', linewidth=2, marker='d', label='Running Average Episodic Reward')
         
         plt.xlabel('Episode')
-        plt.ylabel('Cumulative Average Reward')
-        plt.title('Cumulative Average Reward Over Episodes')
+        plt.ylabel('Running Average Reward')
+        plt.title('Running Average Reward Over Episodes')
         plt.legend()
         plt.grid(True)
         
@@ -244,4 +244,6 @@ class VisualisedEnv:
 
 if __name__ == "__main__":
     args = parse_args()
-    VisualisedEnv(env=args.env, display_info=True, max_steps=100, num_episodes=100, agent_type="qlearning")
+    VisualisedEnv(env=args.env, display_info=True, max_steps=100, num_episodes=200, agent_type="qlearning")
+
+        # choices=["random", "qlearning", "dqn", "curious_dqn"],
