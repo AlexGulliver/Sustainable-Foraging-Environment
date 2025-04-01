@@ -197,7 +197,7 @@ class Viewer(object):
         batch = pyglet.graphics.Batch()
 
         for player in env.players:
-            if player.controller and player.controller.energy > 0:  # ✅ Skip players with no energy
+            if player.controller and player.controller.energy > 0: 
                 row, col = player.position
                 players.append(
                     pyglet.sprite.Sprite(

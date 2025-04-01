@@ -3,6 +3,7 @@ from lbforaging.agents.foragingagent import BaseForagingAgent
 from lbforaging.foraging.environment import Action
 import numpy as np
 
+
 class QLearningForagingAgent(BaseForagingAgent):
     """Foraging Agent with Q-Learning Algorithm"""
 
@@ -24,8 +25,14 @@ class QLearningForagingAgent(BaseForagingAgent):
         if next_state not in self.q_table:
             self.q_table[next_state] = {a: 0 for a in Action}
 
-        best_next_action = max(self.q_table[next_state], key=self.q_table[next_state].get)
-        self.q_table[state][action] += self.alpha * (reward + self.gamma * self.q_table[next_state][best_next_action] - self.q_table[state][action])
+        best_next_action = max(
+            self.q_table[next_state], key=self.q_table[next_state].get
+        )
+        self.q_table[state][action] += self.alpha * (
+            reward
+            + self.gamma * self.q_table[next_state][best_next_action]
+            - self.q_table[state][action]
+        )
 
     def choose_action(self, state):
         # Epsilon-greedy strategy for exploration vs exploitation
@@ -37,43 +44,41 @@ class QLearningForagingAgent(BaseForagingAgent):
             if state not in self.q_table:
                 return np.random.choice(list(Action))
             return max(self.q_table[state], key=self.q_table[state].get)
-        
+
     def receive_reward(self, reward):
         self.reward = reward
 
     def step(self, obs):
         current_state = self.get_state(obs)
-        
+
         # Choose action based on current state
         action = self.choose_action(current_state)
-        
+
         # Store current state for next update
         self.current_state = current_state
         self.last_action = action
-        
+
         # Deduct survival cost
-        self.energy -= self.survival_cost
-        
+        self.energy = max(0, self.energy - self.survival_cost)
+
         print(f"AGENT Position: {self.position}, Energy: {self.energy}")
-        
+
         return action
 
     def receive_reward(self, reward):
         # This method is called by the environment after taking an action
         self.reward = reward
-        
+
         # If we have previous state and action, update Q-value
-        if hasattr(self, 'current_state') and hasattr(self, 'last_action'):
+        if hasattr(self, "current_state") and hasattr(self, "last_action"):
             # Get new state from the current observation
             next_state = self.current_state  # You might need to update this
-            
+
             # Update Q-value with the received reward
             self.update_q_value(
-                self.current_state, 
-                self.last_action, 
-                reward, 
-                next_state
+                self.current_state, self.last_action, reward, next_state
             )
-            
-            # print(f"Received reward: {reward}, Updated Q-value for state {self.current_state}, action {self.last_action}")
-
+            # print(f"Received reward: {reward}, action {self.last_action}")
+            print(
+                f"Received reward: {reward}, Updated Q-value for state {self.current_state}, action {self.last_action}"
+            )

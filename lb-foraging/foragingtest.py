@@ -11,6 +11,7 @@ import pyglet
 import time
 import matplotlib.pyplot as plt
 
+
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument(
@@ -40,210 +41,341 @@ def parse_args():
     return parser.parse_args()
 
 
-class VisualisedEnv:
-    def __init__(self, env: str, max_steps: int, num_episodes: int, agent_type: str, display_info: bool = True):
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+import gymnasium as gym
+import time
+from typing import List
 
+
+class VisualisedEnv:
+    def __init__(
+        self,
+        env: str,
+        max_steps: int,
+        num_episodes: int,
+        agent_type: str,
+        display_info: bool = True,
+    ):
         self.env = gym.make(env, render_mode="human", max_episode_steps=max_steps)
         self.n_agents = self.env.unwrapped.n_agents
         self.display_info = display_info
-        self.episode_lengths = []
         self.agent_type = agent_type
         self.max_timesteps = max_steps
 
         # Parameters
         self.agent_params = {
-            "eta": 0.5, 
-            "carry_capacity": 10, 
+            "eta": 0.5,
+            "carry_capacity": 5,
             "survival_cost": 1,
-            "tau": 0, 
-            "k": 1
+            "tau": 0,
+            "k": 1,
         }
 
-        # self.agents = self._create_agents()
+        self.agents = self._create_agents()
 
         obss, _ = self.env.reset()
         self.env.render()
 
-        if hasattr(self.env.unwrapped, "viewer") and self.env.unwrapped.viewer:
-            self.env.unwrapped.viewer.window.on_key_press = self._key_press
-        else:
-            print("Warning: Viewer not initialized. Keyboard input may not work.")
-
         # Data collection
         self.episode_rewards = [[] for _ in range(self.n_agents)]
+        self.episode_intrinsic_rewards = [[] for _ in range(self.n_agents)]
         self.avg_episode_rewards = []
+        self.avg_episode_intrinsic_rewards = []
         self.episode_lengths = []
-        self.cumulative_rewards = np.zeros(self.n_agents) 
+        self.cumulative_rewards = np.zeros(self.n_agents)
+        self.cumulative_intrinsic_rewards = np.zeros(self.n_agents)
+        self.initial_energy = 10  # Store initial energy value for respawning
 
         self._run_episodes(num_episodes=num_episodes)
-
 
     def _create_agents(self):
         """Create agents based on the selected agent type."""
         if self.agent_type == "random":
-            return [RandomForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+            return [
+                RandomForagingAgent(agent_params=self.agent_params)
+                for _ in range(self.n_agents)
+            ]
         elif self.agent_type == "qlearning":
-            return [QLearningForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+            return [
+                QLearningForagingAgent(agent_params=self.agent_params)
+                for _ in range(self.n_agents)
+            ]
         elif self.agent_type == "dqn":
-            return [DeepQLearningForagingAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+            return [
+                DeepQLearningForagingAgent(agent_params=self.agent_params)
+                for _ in range(self.n_agents)
+            ]
         elif self.agent_type == "curious_dqn":
-            return [CuriosityDrivenDQNAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
+            return [
+                CuriosityDrivenDQNAgent(agent_params=self.agent_params)
+                for _ in range(self.n_agents)
+            ]
         else:
             print(f"Unknown agent type: {self.agent_type}, defaulting to Curious DQN")
-            return [CuriosityDrivenDQNAgent(agent_params=self.agent_params) for _ in range(self.n_agents)]
-
-
-    def _key_press(self, k, mod):
-        from pyglet.window import key
-        if k == key.ESCAPE:
-            self.running = False
-            self.env.close()
-
+            return [
+                CuriosityDrivenDQNAgent(agent_params=self.agent_params)
+                for _ in range(self.n_agents)
+            ]
 
     def _run_episodes(self, num_episodes=1):
         total_rewards = np.zeros(self.n_agents)
+        total_intrinsic_rewards = np.zeros(self.n_agents)
 
         for episode in range(num_episodes):
-
-            # Reset episode rewards and length
             ep_returns = np.zeros(self.n_agents)
+            ep_intrinsic_returns = np.zeros(self.n_agents)
             ep_length = 0
 
-            # Reset the environment
+            # Reset environment
             obss, _ = self.env.reset()
 
-            self.agents=self._create_agents()
-
-            for i, (player, agent) in enumerate(zip(self.env.unwrapped.players, self.agents)):
+            # Respawn all agents for new episode
+            for i, (player, agent) in enumerate(
+                zip(self.env.unwrapped.players, self.agents)
+            ):
                 player.set_controller(agent)
-                # Initialize agent position to match player position
                 agent.position = player.position
-                agent.energy = 10  # Set initial energy
+                agent.energy = self.initial_energy  # Explicitly reset to initial energy
 
             self.env.render()
 
-            if self.display_info:
-                print(f"Episode {episode + 1} begins.")
+            for step in range(self.max_timesteps):
+                # Agents with 0 energy should not act
+                actions = [
+                    agent.step(obs) if agent.energy > 0 else None
+                    for agent, obs in zip(self.agents, obss)
+                ]
+                actions = [act for act in actions if act is not None]
 
-            for step in range(self.max_timesteps): 
-                # Remove dead agents before taking actions
-                self.agents = [agent for agent in self.agents if agent.energy > 0]
-                if not self.agents:  # If all agents are dead, end the episode early
-                    print("All agents have died. Ending episode early.")
+                # If no agents can act, end the episode early
+                if not actions:
+                    print(f"Episode {episode + 1} ended early: All agents are dead.")
                     break
 
-                # Get actions from remaining agents
-                actions = [agent.step(obs) for agent, obs in zip(self.agents, obss)]
-                actions = [act for act in actions if act is not None]  # Remove None actions
-                print(actions)
+                obss, rews, done, trunc, _ = self.env.step(
+                    [act.value for act in actions]
+                )
 
-                if not actions:  # If no valid actions, stop the episode
-                    print("No valid actions remaining. Ending episode.")
-                    break
+                # Collect rewards for agents, including intrinsic rewards for curious DQN agents
+                for i, (agent, rew) in enumerate(zip(self.agents, rews)):
+                    if hasattr(agent, "intrinsic_rewards") and agent.intrinsic_rewards:
+                        # Take the last intrinsic reward for this agent
+                        intrinsic_rew = (
+                            agent.intrinsic_rewards[-1]
+                            if agent.intrinsic_rewards
+                            else 0
+                        )
+                        ep_intrinsic_returns[i] += intrinsic_rew
+                    else:
+                        intrinsic_rew = 0
 
-                obss, rews, done, trunc, _ = self.env.step([act.value for act in actions])
+                    # Zero out rewards for dead agents
+                    if agent.energy == 0:
+                        rews[i] = 0  # Dead agents receive no reward
+                        intrinsic_rew = 0
 
-                ep_returns += np.array(rews)
+                    ep_returns[i] += rews[i]
 
                 if self.display_info:
                     print(f"Step {step + 1}: Rewards {rews}")
 
                 ep_length += 1
-
                 self.env.render()
-                # time.sleep(0.5)
 
+                # If the environment signals an end, stop
                 if done or trunc:
-                    break  # Stop episode if terminated early
+                    break
 
             self.episode_lengths.append(ep_length)
-                    
             total_rewards += ep_returns  # Accumulate rewards
-            
+            total_intrinsic_rewards += ep_intrinsic_returns
+
             # Store episode rewards for each agent
             for i in range(self.n_agents):
                 self.episode_rewards[i].append(ep_returns[i])
-            
-            # Calculate and store average reward for this episode
+
+                # For curious DQN, store intrinsic rewards
+                if hasattr(self.agents[i], "intrinsic_rewards"):
+                    self.episode_intrinsic_rewards[i].append(ep_intrinsic_returns[i])
+                else:
+                    self.episode_intrinsic_rewards[i].append(0)
+
             self.avg_episode_rewards.append(np.mean(ep_returns))
-            
-            # Update cumulative rewards
+            self.avg_episode_intrinsic_rewards.append(np.mean(ep_intrinsic_returns))
+
             self.cumulative_rewards += ep_returns
+            self.cumulative_intrinsic_rewards += ep_intrinsic_returns
 
             if self.display_info:
-                print(f"Episode {episode + 1} reward: {ep_returns}\n")
+                print(f"Episode {episode + 1} reward: {ep_returns}")
+                print(
+                    f"Episode {episode + 1} intrinsic reward: {ep_intrinsic_returns}\n"
+                )
 
-        print(f"Total rewards after {num_episodes} episodes: {total_rewards}")
-        
-        # Plot rewards over time
+        # Plot rewards and intrinsic rewards
         self._plot_rewards()
-
+        self._plot_intrinsic_rewards()
         self._plot_episode_lengths(self.episode_lengths)
 
-        # time.sleep(0.5)
         self.env.close()
 
     def _plot_rewards(self):
-        """Plots the rewards over episodes and average rewards trend."""
-        plt.figure(figsize=(12, 8))
-        
-        # Create subplot layout: 2x1 grid
+        """Plots the rewards over episodes and average episodic reward trend."""
+        plt.figure(figsize=(12, 9))
+
+        # Rewards subplot
         plt.subplot(2, 1, 1)
-        
+
         # Plot individual agent rewards per episode
         for i, rewards in enumerate(self.episode_rewards):
-            plt.plot(range(1, len(rewards) + 1), rewards, marker='o', label=f'Agent {i + 1}')
-            
-        plt.plot(range(1, len(self.avg_episode_rewards) + 1), self.avg_episode_rewards, 
-                color='black', linestyle='--', linewidth=2, marker='s', label='Average Reward Per Episode')
-        
-        plt.xlabel('Episode')
-        plt.ylabel('Reward')
-        plt.title('Agent Rewards per Episode')
+            plt.plot(
+                range(1, len(rewards) + 1), rewards, marker="o", label=f"Agent {i + 1}"
+            )
+
+        plt.plot(
+            range(1, len(self.avg_episode_rewards) + 1),
+            self.avg_episode_rewards,
+            color="black",
+            linestyle="--",
+            linewidth=2,
+            marker="s",
+            label="Average Reward Per Episode",
+        )
+
+        plt.xlabel("Episode")
+        plt.ylabel("Reward")
+        plt.title("Agent Rewards per Episode")
         plt.legend()
         plt.grid(True)
-        
-        # Create subplot for running average of episodic rewards
+
+        # Cumulative average subplot
         plt.subplot(2, 1, 2)
-        
-        # Calculate running average of episodic rewards
-        running_avg_reward = np.cumsum(self.avg_episode_rewards) / np.arange(1, len(self.avg_episode_rewards) + 1)
-        
-        plt.plot(range(1, len(self.avg_episode_rewards) + 1), running_avg_reward, 
-                color='green', linestyle='-', linewidth=2, marker='d', label='Running Average Episodic Reward')
-        
-        plt.xlabel('Episode')
-        plt.ylabel('Running Average Reward')
-        plt.title('Running Average Reward Over Episodes')
+
+        # Average episodic rewards
+        avg_episodic_reward = np.cumsum(self.avg_episode_rewards) / np.arange(
+            1, len(self.avg_episode_rewards) + 1
+        )
+
+        plt.plot(
+            range(1, len(self.avg_episode_rewards) + 1),
+            avg_episodic_reward,
+            color="green",
+            linestyle="-",
+            linewidth=2,
+            marker="d",
+            label="Average Episodic Reward",
+        )
+
+        plt.xlabel("Episode")
+        plt.ylabel("Average Episodic Reward")
+        plt.title("Average Episodic Reward")
         plt.legend()
         plt.grid(True)
-        
-        plt.tight_layout()
-        plt.savefig('rewards_over_time.png')  # Save the figure
-        plt.show()
+
+        plt.tight_layout(h_pad=1)
+        plt.savefig("rewards_plot.png")
+
+    def _plot_intrinsic_rewards(self):
+        """Plots the intrinsic rewards over episodes and average episodic intrinsic reward trend."""
+        plt.figure(figsize=(12, 9))
+
+        # Intrinsic rewards subplot
+        plt.subplot(2, 1, 1)
+
+        # Plot individual agent intrinsic rewards per episode
+        for i, intrinsic_rewards in enumerate(self.episode_intrinsic_rewards):
+            plt.plot(
+                range(1, len(intrinsic_rewards) + 1),
+                intrinsic_rewards,
+                marker="o",
+                label=f"Agent {i + 1}",
+            )
+
+        plt.plot(
+            range(1, len(self.avg_episode_intrinsic_rewards) + 1),
+            self.avg_episode_intrinsic_rewards,
+            color="black",
+            linestyle="--",
+            linewidth=2,
+            marker="s",
+            label="Average Intrinsic Reward Per Episode",
+        )
+
+        plt.xlabel("Episode")
+        plt.ylabel("Intrinsic Reward")
+        plt.title("Agent Intrinsic Rewards per Episode")
+        plt.legend()
+        plt.grid(True)
+
+        # Cumulative average subplot
+        plt.subplot(2, 1, 2)
+
+        # Average episodic intrinsic rewards
+        avg_episodic_intrinsic_reward = np.cumsum(
+            self.avg_episode_intrinsic_rewards
+        ) / np.arange(1, len(self.avg_episode_intrinsic_rewards) + 1)
+
+        plt.plot(
+            range(1, len(self.avg_episode_intrinsic_rewards) + 1),
+            avg_episodic_intrinsic_reward,
+            color="blue",
+            linestyle="-",
+            linewidth=2,
+            marker="d",
+            label="Average Episodic Intrinsic Reward",
+        )
+
+        plt.xlabel("Episode")
+        plt.ylabel("Average Episodic Intrinsic Reward")
+        plt.title("Average Episodic Intrinsic Reward")
+        plt.legend()
+        plt.grid(True)
+
+        plt.tight_layout(h_pad=1)
+        plt.savefig("intrinsic_rewards_plot.png")
 
     def _plot_episode_lengths(self, episode_lengths):
         """Plots the episode lengths over training time."""
         plt.figure(figsize=(10, 5))
-        plt.plot(range(1, len(episode_lengths) + 1), episode_lengths, marker='o', linestyle='-', label="Episode Length")
-        
+        plt.plot(
+            range(1, len(episode_lengths) + 1),
+            episode_lengths,
+            marker="o",
+            linestyle="-",
+            label="Episode Length",
+        )
+
         # Optional: Rolling average for smoothing
         window = 10
         if len(episode_lengths) > window:
-            rolling_avg = np.convolve(episode_lengths, np.ones(window)/window, mode='valid')
-            plt.plot(range(window, len(episode_lengths) + 1), rolling_avg, linestyle='--', color='red', label="Rolling Avg (10 episodes)")
+            rolling_avg = np.convolve(
+                episode_lengths, np.ones(window) / window, mode="valid"
+            )
+            plt.plot(
+                range(window, len(episode_lengths) + 1),
+                rolling_avg,
+                linestyle="--",
+                color="red",
+                label="Rolling Avg (10 episodes)",
+            )
 
-        plt.xlabel('Episode')
-        plt.ylabel('Steps Until Termination')
-        plt.title('Episode Length Over Time')
+        plt.xlabel("Episode")
+        plt.ylabel("Steps Until Termination")
+        plt.title("Episode Length Over Time")
         plt.legend()
         plt.grid(True)
-        plt.savefig('episode_length_over_time.png')  # Save the figure
+        plt.savefig("episode_length_over_time.png")
         plt.show()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    VisualisedEnv(env=args.env, display_info=True, max_steps=100, num_episodes=200, agent_type="qlearning")
-
-        # choices=["random", "qlearning", "dqn", "curious_dqn"],
+    VisualisedEnv(
+        env=args.env,
+        display_info=True,
+        max_steps=100,
+        num_episodes=100,
+        agent_type="curious_dqn",
+    )

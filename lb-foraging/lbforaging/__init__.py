@@ -46,10 +46,10 @@ register(
     id="SustainableForagingEnv-v0",
     entry_point="lbforaging.foraging:ForagingEnv",
     kwargs={
-        "players": 2,
-        "field_size": (4, 4),
-        "max_num_food": 64,
-        "sight": 2,
+        "players": 1,
+        "field_size": (3, 3),
+        "max_num_food": 2,
+        "sight": 3,
         "max_episode_steps": 100,
         "grid_observation": False,
         "penalty": 0.1,
@@ -85,4 +85,3 @@ def register_grid_envs():
                     "grid_observation": True,
                 },
             )
-

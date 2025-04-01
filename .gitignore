@@ -5,10 +5,12 @@
 ### Mac ###
 .DS_Store
 
-### Misc ###
-energy_levels.png 
+# Plots and data visualisation outputs
 rewards_over_time.png
 episode_length_over_time.png
+running_average_rewards.png
+episode_length.png
+intrinsic_rewards_plot.png
 
 ### Linux ###
 *~
