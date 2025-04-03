@@ -102,18 +102,41 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.curiosity_weight = 0.1  # Weight for intrinsic reward
         self.curiosity_lr = 0.001  # Learning rate for curiosity model
 
-        # Environment parameters
-        self.input_dim = 10  # State dimension (adjust based on observation space)
+        # Output dimension is the number of possible actions
         self.output_dim = len(Action)  # Number of possible actions
+        
+        # Initialize input_dim to None, will be set in the first step
+        self.input_dim = None
 
         # Initialise replay memory
         self.memory = ReplayMemory(self.memory_size)
 
+        # Networks will be initialised after we know the input dimensions
+        self.policy_net = None
+        self.target_net = None
+        self.q_optimiser = None
+        self.forward_model = None
+        self.curiosity_optimiser = None
+
+        # Training variables
+        self.steps_done = 0
+        self.episode_rewards = []
+        self.current_state = None
+        self.current_action = None
+        self.last_state = None
+        self.last_action = None
+        self.reward = 0
+        self.intrinsic_rewards = []
+
+    def _initialise_networks(self, input_dim):
+        """Initialize networks once we know the input dimension"""
+        self.input_dim = input_dim
+        
         # Initialise Q-networks
         self.policy_net = DQN(self.input_dim, self.output_dim)
         self.target_net = DQN(self.input_dim, self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
+        self.target_net.eval()  # Set target network to evaluation mode
 
         # Initialise curiosity model
         self.forward_model = ForwardModel(self.input_dim, self.output_dim)
@@ -126,30 +149,23 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             self.forward_model.parameters(), lr=self.curiosity_lr
         )
 
-        # Training variables
-        self.steps_done = 0
-        self.episode_rewards = []
-        self.current_state = None
-        self.current_action = None
-        self.last_state = None
-        self.last_action = None
-        self.reward = 0
-        self.intrinsic_rewards = []
-
     def get_state(self, obs):
         """Convert observation to a state representation"""
         return tuple(obs)
 
     def preprocess_state(self, obs):
         """Convert observation to tensor for DQN input"""
+        # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
-
-        # Handle dimensionality mismatch
-        if state.shape[0] < self.input_dim:
-            padding = np.zeros(self.input_dim - state.shape[0], dtype=np.float32)
-            state = np.concatenate([state, padding])
-        elif state.shape[0] > self.input_dim:
-            state = state[: self.input_dim]
+        
+        # Initialize networks if this is the first time we're seeing data
+        if self.input_dim is None:
+            self._initialise_networks(len(state))
+        
+        # Handle case where observation dimension changes
+        if len(state) != self.input_dim:
+            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
+            self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
 
@@ -167,6 +183,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
     def compute_intrinsic_reward(self, state, action, next_state):
         """Compute intrinsic reward based on prediction error"""
+        if self.forward_model is None:
+            return 0.0  # Return zero intrinsic reward if model isn't initialised yet
+        
         # Convert action to tensor index
         action_idx = torch.tensor([list(Action).index(action)], dtype=torch.long)
 
@@ -201,7 +220,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
     def optimise_model(self):
         """Train the model with a batch from replay memory"""
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < self.batch_size or self.policy_net is None:
             return
 
         # Sample batch
@@ -212,9 +231,14 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         non_final_mask = torch.tensor(
             [not done for done in batch.done], dtype=torch.bool
         )
-        non_final_next_states = torch.cat(
-            [s for s, d in zip(batch.next_state, batch.done) if not d]
-        )
+        
+        # Filter out None values that might occur before networks are initialised
+        valid_next_states = [s for s, d in zip(batch.next_state, batch.done) if not d and s is not None]
+        if valid_next_states:
+            non_final_next_states = torch.cat(valid_next_states)
+        else:
+            # If there are no valid next states, we can't optimize yet
+            return
 
         # Prepare batch data
         state_batch = torch.cat(batch.state)
@@ -279,8 +303,12 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         # Preprocess state for neural network
         state_tensor = self.preprocess_state(obs)
 
-        # Select action
-        action = self.select_action(state_tensor)
+        # Select action once networks are initialised
+        if self.policy_net is not None:
+            action = self.select_action(state_tensor)
+        else:
+            # Default to random action if networks aren't initialised yet
+            action = random.choice(list(Action))
 
         # Deduct survival cost
         self.energy = max(0, self.energy - self.survival_cost)
@@ -299,7 +327,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.reward = reward
 
         # If we have a previous state and action, store experience in replay memory
-        if self.last_state is not None and self.last_action is not None:
+        if self.last_state is not None and self.last_action is not None and self.policy_net is not None:
             # Preprocess states for storage
             last_state_tensor = self.preprocess_state(self.last_state)
             current_state_tensor = self.preprocess_state(self.current_state)
@@ -325,8 +353,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
             # Train the model
             if len(self.memory) >= self.batch_size:
-                q_loss, curiosity_loss = self.optimise_model()
-                if self.steps_done % 10 == 0:
+                loss_info = self.optimise_model()
+                if loss_info and self.steps_done % 10 == 0:
+                    q_loss, curiosity_loss = loss_info
                     print(
                         f"Step {self.steps_done}: Q-Loss: {q_loss:.4f}, Curiosity Loss: {curiosity_loss:.4f}"
                     )

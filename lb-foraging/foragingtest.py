@@ -160,15 +160,13 @@ class VisualisedEnv:
 
                 # Collect rewards for agents, including intrinsic rewards for curious DQN agents
                 for i, (agent, rew) in enumerate(zip(self.agents, rews)):
-                    if hasattr(agent, "intrinsic_rewards") and agent.intrinsic_rewards:
-                        # Take the last intrinsic reward for this agent
-                        intrinsic_rew = (
-                            agent.intrinsic_rewards[-1]
-                            if agent.intrinsic_rewards
-                            else 0
-                        )
-                        ep_intrinsic_returns[i] += intrinsic_rew
-                    else:
+                    intrinsic_rew = 0
+                    try:
+                        # Only access intrinsic_rewards if it exists directly on the agent object
+                        if hasattr(type(agent), 'intrinsic_rewards') or '__intrinsic_rewards' in agent.__dict__:
+                            intrinsic_rew = agent.intrinsic_rewards[-1] if agent.intrinsic_rewards else 0
+                    except (AttributeError, RecursionError):
+                        # If any error occurs, default to 0 for intrinsic reward
                         intrinsic_rew = 0
 
                     # Zero out rewards for dead agents
@@ -177,6 +175,7 @@ class VisualisedEnv:
                         intrinsic_rew = 0
 
                     ep_returns[i] += rews[i]
+                    ep_intrinsic_returns[i] += intrinsic_rew
 
                 if self.display_info:
                     print(f"Step {step + 1}: Rewards {rews}")
@@ -196,10 +195,12 @@ class VisualisedEnv:
             for i in range(self.n_agents):
                 self.episode_rewards[i].append(ep_returns[i])
 
-                # For curious DQN, store intrinsic rewards
-                if hasattr(self.agents[i], "intrinsic_rewards"):
-                    self.episode_intrinsic_rewards[i].append(ep_intrinsic_returns[i])
-                else:
+                try:
+                    if hasattr(type(self.agents[i]), 'intrinsic_rewards') or '__intrinsic_rewards' in self.agents[i].__dict__:
+                        self.episode_intrinsic_rewards[i].append(ep_intrinsic_returns[i])
+                    else:
+                        self.episode_intrinsic_rewards[i].append(0)
+                except (AttributeError, RecursionError):
                     self.episode_intrinsic_rewards[i].append(0)
 
             self.avg_episode_rewards.append(np.mean(ep_returns))
@@ -376,6 +377,6 @@ if __name__ == "__main__":
         env=args.env,
         display_info=True,
         max_steps=100,
-        num_episodes=100,
-        agent_type="curious_dqn",
+        num_episodes=2500,
+        agent_type="curious_dqn",  # "random", "qlearning", "dqn", "curious_dqn"
     )

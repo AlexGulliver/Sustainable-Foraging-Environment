@@ -59,23 +59,19 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.learning_rate = 0.001  # Learning rate
         self.memory_size = 10000  # Replay memory size
 
-        # Environment parameters
-        self.input_dim = (
-            10  # State dimension (needs to be adjusted based on observation space)
-        )
+        # Output dimension is the number of possible actions
         self.output_dim = len(Action)  # Number of possible actions
-
+        
+        # Initialize input_dim to None, will be set in the first step
+        self.input_dim = None
+        
+        # Networks will be initialised after we know the input dimensions
+        self.policy_net = None
+        self.target_net = None
+        self.optimiser = None
+        
         # Initialise replay memory
         self.memory = ReplayMemory(self.memory_size)
-
-        # Initialise networks
-        self.policy_net = DQN(self.input_dim, self.output_dim)
-        self.target_net = DQN(self.input_dim, self.output_dim)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()  # Set target network to evaluation mode
-
-        # Initialise optimiser
-        self.optimiser = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
 
         # Training variables
         self.steps_done = 0
@@ -86,22 +82,36 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.last_action = None
         self.reward = 0
 
+    def _initialise_networks(self, input_dim):
+        """Initialize networks once we know the input dimension"""
+        self.input_dim = input_dim
+        
+        # Initialise networks
+        self.policy_net = DQN(self.input_dim, self.output_dim)
+        self.target_net = DQN(self.input_dim, self.output_dim)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()  # Set target network to evaluation mode
+
+        # Initialise optimiser
+        self.optimiser = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
+
     def get_state(self, obs):
         """Convert observation to a state representation"""
         return tuple(obs)
 
     def preprocess_state(self, obs):
         """Convert observation to tensor for DQN input"""
-        # Flatten and normalise the observation
+        # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
-
-        # If state has less dimensions than input_dim, pad with zeros
-        if state.shape[0] < self.input_dim:
-            padding = np.zeros(self.input_dim - state.shape[0], dtype=np.float32)
-            state = np.concatenate([state, padding])
-        # If state has more dimensions, truncate
-        elif state.shape[0] > self.input_dim:
-            state = state[: self.input_dim]
+        
+        # Initialize networks if this is the first time we're seeing data
+        if self.input_dim is None:
+            self._initialise_networks(len(state))
+        
+        # Handle case where observation dimension changes
+        if len(state) != self.input_dim:
+            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
+            self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
 
@@ -118,7 +128,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
 
     def optimise_model(self):
         """Train the model with a batch from replay memory"""
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < self.batch_size or self.policy_net is None:
             return
 
         # Sample batch
@@ -129,9 +139,14 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         non_final_mask = torch.tensor(
             [not done for done in batch.done], dtype=torch.bool
         )
-        non_final_next_states = torch.cat(
-            [s for s, d in zip(batch.next_state, batch.done) if not d]
-        )
+        
+        # Filter out None values that might occur before networks are initialised
+        valid_next_states = [s for s, d in zip(batch.next_state, batch.done) if not d and s is not None]
+        if valid_next_states:
+            non_final_next_states = torch.cat(valid_next_states)
+        else:
+            # If there are no valid next states, we can't optimize yet
+            return
 
         # Prepare batch data
         state_batch = torch.cat(batch.state)
@@ -144,10 +159,11 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
 
         # Compute V(s_{t+1}) for all next states
         next_state_values = torch.zeros(self.batch_size, dtype=torch.float32)
-        with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(
-                non_final_next_states
-            ).max(1)[0]
+        if non_final_next_states.size(0) > 0:  # Check if we have any non-final states
+            with torch.no_grad():
+                next_state_values[non_final_mask] = self.target_net(
+                    non_final_next_states
+                ).max(1)[0]
 
         # Compute the expected Q values
         expected_state_action_values = reward_batch + (self.gamma * next_state_values)
@@ -179,8 +195,12 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         # Preprocess state for neural network
         state_tensor = self.preprocess_state(obs)
 
-        # Select action
-        action = self.select_action(state_tensor)
+        # Select action once networks are initialised
+        if self.policy_net is not None:
+            action = self.select_action(state_tensor)
+        else:
+            # Default to random action if networks aren't initialised yet
+            action = random.choice(list(Action))
 
         # Deduct survival cost
         self.energy = max(0, self.energy - self.survival_cost)
@@ -199,7 +219,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.reward = reward
 
         # If we have a previous state and action, store experience in replay memory
-        if self.last_state is not None and self.last_action is not None:
+        if self.last_state is not None and self.last_action is not None and self.policy_net is not None:
             # Preprocess states for storage
             last_state_tensor = self.preprocess_state(self.last_state)
             current_state_tensor = self.preprocess_state(self.current_state)
@@ -215,7 +235,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
                 )
             )
 
-            # Train the model
+            # Train the model if networks are initialised
             self.optimise_model()
 
             # Update target network
