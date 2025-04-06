@@ -40,7 +40,6 @@ except ImportError:
     """
     )
 
-
 RAD2DEG = 57.29577951308232
 # # Define some colors
 _BLACK = (0, 0, 0)
@@ -112,8 +111,11 @@ class Viewer(object):
             translation=(-left * scalex, -bottom * scaley), scale=(scalex, scaley)
         )
 
+    def to_gl_color(self, color):
+        return tuple([c / 255.0 for c in color])
+
     def render(self, env, return_rgb_array=False):
-        glClearColor(*_GREEN, 0)
+        glClearColor(*self.to_gl_color(_BACKGROUND_COLOR), 1.0)
         self.window.clear()
         self.window.switch_to()
         self.window.dispatch_events()

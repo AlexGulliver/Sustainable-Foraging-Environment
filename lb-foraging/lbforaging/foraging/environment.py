@@ -255,24 +255,45 @@ class ForagingEnv(gym.Env):
             or abs(player.position[1] - col) == 1
             and player.position[0] == row
         ]
-
+    
+    # Bottom right corner food spawn
     def spawn_food(self, max_num_food):
         food_count = 0
         attempts = 0
+
+        row, col = 2, 2  # Bottom-right cell in a 3x3 grid
+
         while food_count < max_num_food and attempts < 1000:
             attempts += 1
-            row = self.np_random.integers(0, self.rows)
-            col = self.np_random.integers(0, self.cols)
-            # check if it has neighbors:
+
             if not self._is_empty_location(row, col):
-                # print(f"Blocked location at ({row}, {col})")
                 continue
 
             self.field[row, col] = 1
-
             food_count += 1
+
         self._food_spawned = self.field.sum()
 
+
+    # Simple env food spawn
+    # def spawn_food(self, max_num_food):
+    #     food_count = 0
+    #     attempts = 0
+    #     while food_count < max_num_food and attempts < 1000:
+    #         attempts += 1
+    #         row = self.np_random.integers(0, self.rows)
+    #         col = self.np_random.integers(0, self.cols)
+    #         # check if it has neighbors:
+    #         if not self._is_empty_location(row, col):
+    #             # print(f"Blocked location at ({row}, {col})")
+    #             continue
+
+    #         self.field[row, col] = 1
+
+    #         food_count += 1
+    #     self._food_spawned = self.field.sum()
+
+    # Original food spawn method
     # def spawn_food(self, max_num_food):
     #     """
     #     Spawns food in the bottom corners of the field.
@@ -317,47 +338,68 @@ class ForagingEnv(gym.Env):
         
     #     self._food_spawned = self.field.sum()
 
+    # Replenish food only in the bottom-right corner of the field
     def replenish_food(self, replenishment_rate, previous_field, max_food):
         """
-        Replenishes food randomly across the field, ensuring total food
-        never exceeds max_food."""
-        # Count current food items
+        Replenishes food only in the bottom-right corner (2,2),
+        ensuring total food never exceeds max_food.
+        """
         current_food_count = self.field.sum()
-
-        # Calculate how many more food items can be added
         remaining_food_slots = max_food - current_food_count
 
-        # If no more food can be added, return
         if remaining_food_slots <= 0:
             return
 
-        # Create a list of all empty locations
-        empty_locations = [
-            (row, col)
-            for row in range(self.rows)
-            for col in range(self.cols)
-            if self._is_empty_location(row, col)
-        ]
+        row, col = 2, 2  # Bottom-right cell
 
-        # Shuffle the empty locations to ensure random placement
-        self.np_random.shuffle(empty_locations)
+        if self._is_empty_location(row, col) and self.np_random.uniform() < replenishment_rate:
+            self.field[row, col] = 1
 
-        # Track newly added food
-        food_added = 0
-
-        # Randomly place food in empty locations
-        for row, col in empty_locations:
-            # Stop if reached max food limit
-            if food_added >= remaining_food_slots:
-                break
-
-            # Spawn food with replenishment rate
-            if self.np_random.uniform() < replenishment_rate:
-                self.field[row, col] = 1
-                food_added += 1
-
-        # Update food spawned count
         self._food_spawned = self.field.sum()
+
+
+    # Replenish food randomly across the field
+    # def replenish_food(self, replenishment_rate, previous_field, max_food):
+    #     """
+    #     Replenishes food randomly across the field, ensuring total food
+    #     never exceeds max_food."""
+    #     # Count current food items
+    #     current_food_count = self.field.sum()
+
+    #     # Calculate how many more food items can be added
+    #     remaining_food_slots = max_food - current_food_count
+
+    #     # If no more food can be added, return
+    #     if remaining_food_slots <= 0:
+    #         return
+
+    #     # Create a list of all empty locations
+    #     empty_locations = [
+    #         (row, col)
+    #         for row in range(self.rows)
+    #         for col in range(self.cols)
+    #         if self._is_empty_location(row, col)
+    #     ]
+
+    #     # Shuffle the empty locations to ensure random placement
+    #     self.np_random.shuffle(empty_locations)
+
+    #     # Track newly added food
+    #     food_added = 0
+
+    #     # Randomly place food in empty locations
+    #     for row, col in empty_locations:
+    #         # Stop if reached max food limit
+    #         if food_added >= remaining_food_slots:
+    #             break
+
+    #         # Spawn food with replenishment rate
+    #         if self.np_random.uniform() < replenishment_rate:
+    #             self.field[row, col] = 1
+    #             food_added += 1
+
+    #     # Update food spawned count
+    #     self._food_spawned = self.field.sum()
 
     def _is_empty_location(self, row, col):
         if self.field[row, col] != 0:

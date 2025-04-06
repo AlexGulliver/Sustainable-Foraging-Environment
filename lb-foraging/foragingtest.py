@@ -108,7 +108,6 @@ class VisualisedEnv:
         self.cumulative_intrinsic_rewards = np.zeros(self.n_agents)
         self.initial_energy = self.starting_energy # Store initial energy value for respawning
         
-        # Additional metrics
         self.max_episodes_to_track = 3  # Number of top episodes to track
         self.episodes_completed = 0
         self.episodes_reached_max_steps = 0
@@ -639,8 +638,8 @@ if __name__ == "__main__":
     VisualisedEnv(
         env=args.env,
         display_info=True,
-        max_steps=100,
-        num_episodes=100,
+        max_steps=30,
+        num_episodes=1000,
         agent_type="dqn",  # "random", "qlearning", "dqn", "curious_dqn"
         starting_energy=10,  # Initial energy for agents
     )
