@@ -94,7 +94,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.epsilon_decay = 0.995  # Decay rate for epsilon
         self.epsilon_min = 0.01  # Minimum epsilon value
         self.batch_size = 64  # Batch size for training
-        self.target_update = 10  # How often to update target network
+        self.target_update = 10  # How often to update target network (steps)
         self.learning_rate = 0.001  # Learning rate
         self.memory_size = 10000  # Replay memory size
 
@@ -103,7 +103,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.curiosity_lr = 0.001  # Learning rate for curiosity model
 
         # Output dimension is the number of possible actions
-        self.output_dim = len(Action)  # Number of possible actions
+        self.output_dim = len(Action)
         
         # Initialize input_dim to None, will be set in the first step
         self.input_dim = None
@@ -294,8 +294,6 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
     def step(self, obs):
         """Take a step in the environment"""
-        # Preprocess state
-        print(f"AGENT POSITION {self.position}")
 
         # Convert observation to state
         current_state = self.get_state(obs)
@@ -319,7 +317,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.current_state = current_state
 
         print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
-
+        # print(f"AGENT POSITION {self.position}")
+        # Increment steps
+        self.steps_done += 1
         return action
 
     def receive_reward(self, reward):
@@ -365,5 +365,3 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
         print(f"Received reward: {reward}, action {self.last_action}")
-        # Increment steps
-        self.steps_done += 1
