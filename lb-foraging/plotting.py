@@ -1,9 +1,10 @@
-"""For logging, data collection, and visualisation for foraging simulations"""
+"""Handles logging, data collection, and visualisation for foraging simulations"""
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import datetime
+import seaborn as sns
 
 
 class DataCollector:
@@ -29,6 +30,7 @@ class DataCollector:
         self.max_timesteps = max_timesteps
         self.starting_energy = starting_energy
         self.display_info = display_info
+        self.num_episodes = num_episodes
         
         # Data collection
         self.episode_rewards = [[] for _ in range(self.n_agents)]
@@ -125,18 +127,18 @@ class DataCollector:
         self.episodes_completed += 1
     
     def generate_summary(self, elapsed_time):
-        """Generate and log summary statistics and create visualisation plots"""
-        self._generate_summary_statistics(elapsed_time)
-        self._plot_rewards()
-        
-        if self.agent_type == "curious_dqn":
-            self._plot_intrinsic_rewards()
+            """Generate and log summary statistics and create visualisation plots"""
+            self._generate_summary_statistics(elapsed_time)
+            self._plot_rewards()
             
-        self._plot_episode_lengths()
-        self._plot_additional_metrics()
+            if self.agent_type == "curious_dqn":
+                self._plot_intrinsic_rewards()
+                
+            self._plot_episode_lengths()
+            # Removed call to _plot_additional_metrics()
+            
+            self.log_file.close()
         
-        self.log_file.close()
-    
     def _generate_summary_statistics(self, elapsed_time):
         """Generate and log summary statistics for the simulation"""
         # Calculate overall statistics
@@ -188,11 +190,10 @@ class DataCollector:
         self.log(f"  Log file: {self.log_dir}/simulation_log.txt")
         self.log(f"  Agent rewards plot: {self.log_dir}/agent_rewards_per_episode.png")
         self.log(f"  Average episodic reward plot: {self.log_dir}/average_episodic_reward.png")
-        self.log(f"  Combined rewards plot: {self.log_dir}/rewards_plot.png")
         self.log(f"  Episode length plot: {self.log_dir}/episode_length_over_time.png")
         if self.agent_type == "curious_dqn":
             self.log(f"  Intrinsic rewards plot: {self.log_dir}/intrinsic_rewards_plot.png")
-        self.log(f"  Additional metrics plot: {self.log_dir}/additional_metrics.png")
+        # Removed reference to additional_metrics.png
         self.log("=" * 50)
     
     def _plot_rewards(self):
@@ -200,27 +201,48 @@ class DataCollector:
         if len(self.episode_rewards[0]) == 0:
             self.log("No episodes completed, skipping reward plots")
             return
-            
-        # Plot individual agent rewards per episode
-        plt.figure(figsize=(10, 6))
-        for i, rewards in enumerate(self.episode_rewards):
-            plt.plot(
-                range(1, len(rewards) + 1), rewards, marker="o", label=f"Agent {i + 1}"
-            )
 
+        # Always use the large dataset approach for consistency
+        self._plot_rewards_large_dataset()
+            
+    def _plot_rewards_large_dataset(self):
+        """
+        Optimised plotting for better visualisation.
+        """
+        total_episodes = len(self.episode_rewards[0])
+        
+        # Use a rolling window to smooth out fluctuations
+        window_size = max(10, int(total_episodes / 100))
+        
+        # Create a plot for smoothed agent rewards
+        plt.figure(figsize=(12, 6))
+        
+        # Create rolling window averages for each agent
+        for i, rewards in enumerate(self.episode_rewards):
+            # Calculate rolling average
+            rolling_avg = np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
+            # Plot with fewer markers for clarity
+            plt.plot(
+                range(window_size, len(rewards) + 1), 
+                rolling_avg,
+                label=f"Agent {i + 1} (Smoothed)",
+                linewidth=1.5
+            )
+        
+        # Add the average reward line
+        rolling_avg_all = np.convolve(self.avg_episode_rewards, np.ones(window_size)/window_size, mode='valid')
         plt.plot(
-            range(1, len(self.avg_episode_rewards) + 1),
-            self.avg_episode_rewards,
+            range(window_size, len(self.avg_episode_rewards) + 1),
+            rolling_avg_all,
             color="black",
-            linestyle="--",
-            linewidth=2,
-            marker="s",
-            label="Average Reward Per Episode",
+            linestyle="-",
+            linewidth=3,
+            label=f"Average Reward ({window_size}-episode Moving Average)"
         )
 
         plt.xlabel("Episode")
         plt.ylabel("Reward")
-        plt.title("Agent Rewards per Episode")
+        plt.title(f"Agent Rewards per Episode (Smoothed over {window_size} episodes)")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
@@ -228,76 +250,42 @@ class DataCollector:
         plt.close()
 
         # Plot average episodic reward
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 6))
+        
+        # Compute cumulative average reward
         avg_episodic_reward = np.cumsum(self.avg_episode_rewards) / np.arange(
             1, len(self.avg_episode_rewards) + 1
         )
-
-        plt.plot(
-            range(1, len(self.avg_episode_rewards) + 1),
-            avg_episodic_reward,
-            color="green",
-            linestyle="-",
-            linewidth=2,
-            marker="d",
-            label="Average Episodic Reward",
-        )
+        
+        # Create a smoothed version for easier readability
+        if total_episodes > 500:
+            # Subsample for very large datasets
+            sample_rate = int(total_episodes / 500)
+            plt.plot(
+                range(1, len(avg_episodic_reward) + 1, sample_rate),
+                avg_episodic_reward[::sample_rate],
+                color="green",
+                linestyle="-",
+                linewidth=2,
+                label="Cumulative Average Reward"
+            )
+        else:
+            plt.plot(
+                range(1, len(avg_episodic_reward) + 1),
+                avg_episodic_reward,
+                color="green",
+                linestyle="-",
+                linewidth=2,
+                label="Cumulative Average Reward"
+            )
 
         plt.xlabel("Episode")
         plt.ylabel("Average Episodic Reward")
-        plt.title("Average Episodic Reward")
+        plt.title("Average Episodic Reward Over Time")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(f"{self.log_dir}/average_episodic_reward.png")
-        plt.close()
-        
-        # Combined rewards plot
-        plt.figure(figsize=(12, 9))
-        
-        # Rewards subplot
-        plt.subplot(2, 1, 1)
-        for i, rewards in enumerate(self.episode_rewards):
-            plt.plot(
-                range(1, len(rewards) + 1), rewards, marker="o", label=f"Agent {i + 1}"
-            )
-
-        plt.plot(
-            range(1, len(self.avg_episode_rewards) + 1),
-            self.avg_episode_rewards,
-            color="black",
-            linestyle="--",
-            linewidth=2,
-            marker="s",
-            label="Average Reward Per Episode",
-        )
-
-        plt.xlabel("Episode")
-        plt.ylabel("Reward")
-        plt.title("Agent Rewards per Episode")
-        plt.legend()
-        plt.grid(True)
-
-        # Cumulative average subplot
-        plt.subplot(2, 1, 2)
-        plt.plot(
-            range(1, len(self.avg_episode_rewards) + 1),
-            avg_episodic_reward,
-            color="green",
-            linestyle="-",
-            linewidth=2,
-            marker="d",
-            label="Average Episodic Reward",
-        )
-
-        plt.xlabel("Episode")
-        plt.ylabel("Average Episodic Reward")
-        plt.title("Average Episodic Reward")
-        plt.legend()
-        plt.grid(True)
-
-        plt.tight_layout(h_pad=1)
-        plt.savefig(f"{self.log_dir}/rewards_plot.png")
         plt.close()
 
     def _plot_intrinsic_rewards(self):
@@ -306,33 +294,49 @@ class DataCollector:
             self.log("No episodes completed, skipping intrinsic reward plots")
             return
             
+        # Always use the large dataset approach for consistency
+        self._plot_intrinsic_rewards_large_dataset()
+    
+    def _plot_intrinsic_rewards_large_dataset(self):
+        """
+        Optimised plotting for intrinsic rewards with better visualisation.
+        """
+        total_episodes = len(self.episode_intrinsic_rewards[0])
+        window_size = max(10, int(total_episodes / 100))
+        
         plt.figure(figsize=(12, 9))
 
-        # Intrinsic rewards subplot
+        # Intrinsic rewards subplot - smoothed version
         plt.subplot(2, 1, 1)
 
-        # Plot individual agent intrinsic rewards per episode
+        # Plot smoothed individual agent intrinsic rewards
         for i, intrinsic_rewards in enumerate(self.episode_intrinsic_rewards):
+            rolling_avg = np.convolve(intrinsic_rewards, np.ones(window_size)/window_size, mode='valid')
             plt.plot(
-                range(1, len(intrinsic_rewards) + 1),
-                intrinsic_rewards,
-                marker="o",
-                label=f"Agent {i + 1}",
+                range(window_size, len(intrinsic_rewards) + 1),
+                rolling_avg,
+                label=f"Agent {i + 1} (Smoothed)",
+                linewidth=1.5
             )
 
+        # Smoothed average intrinsic rewards
+        avg_smoothed = np.convolve(
+            self.avg_episode_intrinsic_rewards, 
+            np.ones(window_size)/window_size, 
+            mode='valid'
+        )
         plt.plot(
-            range(1, len(self.avg_episode_intrinsic_rewards) + 1),
-            self.avg_episode_intrinsic_rewards,
+            range(window_size, len(self.avg_episode_intrinsic_rewards) + 1),
+            avg_smoothed,
             color="black",
-            linestyle="--",
-            linewidth=2,
-            marker="s",
-            label="Average Intrinsic Reward Per Episode",
+            linestyle="-",
+            linewidth=3,
+            label=f"Average Intrinsic Reward ({window_size}-episode Moving Average)",
         )
 
         plt.xlabel("Episode")
         plt.ylabel("Intrinsic Reward")
-        plt.title("Agent Intrinsic Rewards per Episode")
+        plt.title(f"Agent Intrinsic Rewards (Smoothed over {window_size} episodes)")
         plt.legend()
         plt.grid(True)
 
@@ -344,19 +348,30 @@ class DataCollector:
             self.avg_episode_intrinsic_rewards
         ) / np.arange(1, len(self.avg_episode_intrinsic_rewards) + 1)
 
-        plt.plot(
-            range(1, len(self.avg_episode_intrinsic_rewards) + 1),
-            avg_episodic_intrinsic_reward,
-            color="blue",
-            linestyle="-",
-            linewidth=2,
-            marker="d",
-            label="Average Episodic Intrinsic Reward",
-        )
+        # Subsample for very large datasets
+        if total_episodes > 500:
+            sample_rate = int(total_episodes / 500)
+            plt.plot(
+                range(1, len(avg_episodic_intrinsic_reward) + 1, sample_rate),
+                avg_episodic_intrinsic_reward[::sample_rate],
+                color="blue",
+                linestyle="-",
+                linewidth=2,
+                label="Cumulative Average Intrinsic Reward",
+            )
+        else:
+            plt.plot(
+                range(1, len(avg_episodic_intrinsic_reward) + 1),
+                avg_episodic_intrinsic_reward,
+                color="blue",
+                linestyle="-",
+                linewidth=2,
+                label="Cumulative Average Intrinsic Reward",
+            )
 
         plt.xlabel("Episode")
         plt.ylabel("Average Episodic Intrinsic Reward")
-        plt.title("Average Episodic Intrinsic Reward")
+        plt.title("Cumulative Average Intrinsic Reward")
         plt.legend()
         plt.grid(True)
 
@@ -370,83 +385,42 @@ class DataCollector:
             self.log("No episodes completed, skipping episode length plots")
             return
             
-        plt.figure(figsize=(10, 5))
+        # Determine the window size based on the number of episodes
+        total_episodes = len(self.episode_lengths)
+        window_size = max(10, int(total_episodes / 50))
+            
+        plt.figure(figsize=(12, 6))
+        
+        # Calculate rolling average
+        rolling_avg = np.convolve(
+            self.episode_lengths, np.ones(window_size) / window_size, mode="valid"
+        )
+        
+        # Plot raw data with very light blue color instead of low opacity
         plt.plot(
             range(1, len(self.episode_lengths) + 1),
             self.episode_lengths,
-            marker="o",
+            marker="", 
             linestyle="-",
-            label="Episode Length",
+            color="lightblue",
+            label="Episode Length"
         )
-
-        # Optional: Rolling average for smoothing
-        window = min(10, len(self.episode_lengths))
-        if len(self.episode_lengths) > window:
-            rolling_avg = np.convolve(
-                self.episode_lengths, np.ones(window) / window, mode="valid"
-            )
-            plt.plot(
-                range(window, len(self.episode_lengths) + 1),
-                rolling_avg,
-                linestyle="--",
-                color="red",
-                label=f"Rolling Avg ({window} episodes)",
-            )
+        
+        # Plot smoothed data with stronger color
+        plt.plot(
+            range(window_size, len(self.episode_lengths) + 1),
+            rolling_avg,
+            linestyle="-",
+            linewidth=2,
+            color="blue",
+            label=f"Moving Average ({window_size} episodes)"
+        )
 
         plt.xlabel("Episode")
         plt.ylabel("Steps Until Termination")
         plt.title("Episode Length Over Time")
         plt.legend()
         plt.grid(True)
+        plt.tight_layout()
         plt.savefig(f"{self.log_dir}/episode_length_over_time.png")
         plt.close()
-        
-    def _plot_additional_metrics(self):
-        """Plot additional performance metrics."""
-        if len(self.episode_survival_rates) == 0:
-            self.log("No episodes completed, skipping additional metrics plots")
-            return
-            
-        plt.figure(figsize=(12, 10))
-        
-        # Survival rates subplot
-        plt.subplot(2, 2, 1)
-        plt.plot(range(1, len(self.episode_survival_rates) + 1), 
-                self.episode_survival_rates, 'g-', label='Agent Survival Rate')
-        plt.xlabel('Episode')
-        plt.ylabel('Survival Rate (%)')
-        plt.title('Agent Survival Rate per Episode')
-        plt.grid(True)
-        
-        # Deaths per episode subplot
-        plt.subplot(2, 2, 3)
-        plt.plot(range(1, len(self.agent_deaths_per_episode) + 1), 
-                self.agent_deaths_per_episode, 'r-', label='Agent Deaths')
-        plt.xlabel('Episode')
-        plt.ylabel('Number of Deaths')
-        plt.title('Agent Deaths per Episode')
-        plt.grid(True)
-        
-        # Combined metrics subplot - normalise and plot together
-        plt.subplot(2, 2, 4)
-        
-        # Normalise metrics
-        if self.episode_survival_rates:
-            norm_survival = [x / 100 for x in self.episode_survival_rates]
-            plt.plot(range(1, len(norm_survival) + 1), norm_survival, 'g-', label='Normalised Survival')
-        
-        if self.avg_episode_rewards:
-            max_reward = max(max(self.avg_episode_rewards), abs(min(self.avg_episode_rewards))) if self.avg_episode_rewards else 1
-            norm_rewards = [x / max_reward for x in self.avg_episode_rewards]
-            plt.plot(range(1, len(norm_rewards) + 1), norm_rewards, 'orange', label='Normalised Reward')
-        
-        plt.xlabel('Episode')
-        plt.ylabel('Normalised Value')
-        plt.title('Combined Performance Metrics')
-        plt.legend()
-        plt.grid(True)
-        
-        plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/additional_metrics.png")
-
-
