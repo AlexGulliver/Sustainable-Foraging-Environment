@@ -1,6 +1,4 @@
-"""
-2D rendering of the level based foraging domain
-"""
+"""2D rendering of the level based foraging domain."""
 
 import math
 import os
@@ -111,11 +109,11 @@ class Viewer(object):
             translation=(-left * scalex, -bottom * scaley), scale=(scalex, scaley)
         )
 
-    def to_gl_color(self, color):
-        return tuple([c / 255.0 for c in color])
+    def to_gl_colour(self, colour):
+        return tuple([c / 255.0 for c in colour])
 
     def render(self, env, return_rgb_array=False):
-        glClearColor(*self.to_gl_color(_BACKGROUND_COLOR), 1.0)
+        glClearColor(*self.to_gl_colour(_BACKGROUND_COLOR), 1.0)
         self.window.clear()
         self.window.switch_to()
         self.window.dispatch_events()

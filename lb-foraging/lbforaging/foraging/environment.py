@@ -1,3 +1,5 @@
+"""Handles the Sustainable Foraging Environment."""
+
 from collections import namedtuple, defaultdict
 from enum import Enum
 from itertools import product
