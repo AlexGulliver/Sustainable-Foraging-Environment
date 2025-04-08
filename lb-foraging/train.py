@@ -6,7 +6,7 @@ if __name__ == "__main__":
     trainer = ForagingTrainer(
         env_name="SustainableForagingEnv-v0",  # Environment to use
         max_steps=50,                          # Maximum number of steps per episode
-        num_episodes=5000,                     # Number of episodes to run
+        num_episodes=2500,                     # Number of episodes to run
         agent_type="curious_dqn",              # Choose from: "random", "qlearning", "dqn", "curious_dqn"
         starting_energy=10,                    # Initial energy for agents
         display_info=True,                     # Whether to display detailed info during training

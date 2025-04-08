@@ -50,8 +50,12 @@ class ForwardModel(nn.Module):
         self.action_dim = action_dim
 
         # State and action encoders
-        self.state_encoder = nn.Sequential(nn.Linear(state_dim, hidden_dim), nn.ReLU())
-
+        self.state_encoder = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), 
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),  # Add extra layer
+            nn.ReLU()
+        )
         self.action_encoder = nn.Sequential(
             nn.Linear(action_dim, hidden_dim), nn.ReLU()
         )
@@ -99,8 +103,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.memory_size = 10000  # Replay memory size
 
         # Curiosity parameters
-        self.curiosity_weight = 0.1  # Weight for intrinsic reward
-        self.curiosity_lr = 0.001  # Learning rate for curiosity model
+        self.curiosity_weight = 0.5  # Weight for intrinsic reward
+        self.curiosity_lr = 0.0001  # Learning rate for curiosity model
+        self.curiosity_decay = 0.9999
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
@@ -129,7 +134,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.intrinsic_rewards = []
 
     def _initialise_networks(self, input_dim):
-        """Initialize networks once we know the input dimension"""
+        """Initialise networks once we know the input dimension"""
         self.input_dim = input_dim
         
         # Initialise Q-networks

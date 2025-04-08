@@ -127,18 +127,18 @@ class DataCollector:
         self.episodes_completed += 1
     
     def generate_summary(self, elapsed_time):
-            """Generate and log summary statistics and create visualisation plots"""
-            self._generate_summary_statistics(elapsed_time)
-            self._plot_rewards()
-            
-            if self.agent_type == "curious_dqn":
-                self._plot_intrinsic_rewards()
-                
-            self._plot_episode_lengths()
-            # Removed call to _plot_additional_metrics()
-            
-            self.log_file.close()
+        """Generate and log summary statistics and create visualisation plots"""
+        self._generate_summary_statistics(elapsed_time)
+        self._plot_rewards()
         
+        if self.agent_type == "curious_dqn":
+            self._plot_intrinsic_rewards()
+            self._plot_intrinsic_vs_extrinsic_rewards()  # New call to plot comparison
+            
+        self._plot_episode_lengths()
+        
+        self.log_file.close()
+
     def _generate_summary_statistics(self, elapsed_time):
         """Generate and log summary statistics for the simulation"""
         # Calculate overall statistics
@@ -423,4 +423,120 @@ class DataCollector:
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(f"{self.log_dir}/episode_length_over_time.png")
+        plt.close()
+
+    def _plot_intrinsic_vs_extrinsic_rewards(self):
+        """
+        Plots intrinsic vs extrinsic rewards for curious DQN agent to visualize
+        the balance between exploration and exploitation during training.
+        """
+        if self.agent_type != "curious_dqn" or len(self.episode_rewards[0]) == 0:
+            self.log("Not a curious DQN agent or no episodes completed, skipping intrinsic vs extrinsic reward plot")
+            return
+            
+        total_episodes = len(self.episode_rewards[0])
+        window_size = max(10, int(total_episodes / 100))
+        
+        plt.figure(figsize=(12, 10))
+        
+        # Subplot 1: Intrinsic vs Extrinsic rewards over time
+        plt.subplot(2, 1, 1)
+        
+        # Calculate average rewards across all agents
+        avg_extrinsic = self.avg_episode_rewards
+        avg_intrinsic = self.avg_episode_intrinsic_rewards
+        
+        # Calculate smoothed versions for better visualization
+        if len(avg_extrinsic) > window_size:
+            smoothed_extrinsic = np.convolve(avg_extrinsic, np.ones(window_size)/window_size, mode='valid')
+            smoothed_intrinsic = np.convolve(avg_intrinsic, np.ones(window_size)/window_size, mode='valid')
+            episodes_range = range(window_size, len(avg_extrinsic) + 1)
+            
+            plt.plot(
+                episodes_range, 
+                smoothed_extrinsic, 
+                color="green", 
+                linewidth=2, 
+                label=f"Extrinsic Reward ({window_size}-episode Moving Average)"
+            )
+            plt.plot(
+                episodes_range, 
+                smoothed_intrinsic, 
+                color="purple", 
+                linewidth=2, 
+                label=f"Intrinsic Reward ({window_size}-episode Moving Average)"
+            )
+        else:
+            # When we don't have enough episodes for smoothing
+            plt.plot(
+                range(1, len(avg_extrinsic) + 1), 
+                avg_extrinsic, 
+                color="green", 
+                linewidth=2, 
+                label="Extrinsic Reward"
+            )
+            plt.plot(
+                range(1, len(avg_intrinsic) + 1), 
+                avg_intrinsic, 
+                color="purple", 
+                linewidth=2, 
+                label="Intrinsic Reward"
+            )
+        
+        plt.xlabel("Episode")
+        plt.ylabel("Reward Value")
+        plt.title("Intrinsic vs Extrinsic Rewards Over Time")
+        plt.grid(True)
+        plt.legend()
+        
+        # Subplot 2: Ratio of intrinsic to extrinsic rewards
+        plt.subplot(2, 1, 2)
+        
+        # Calculate ratio (avoid division by zero)
+        ratios = []
+        for ex, intr in zip(avg_extrinsic, avg_intrinsic):
+            if abs(ex) < 1e-10:  # Prevent division by zero
+                ratios.append(0 if intr == 0 else 1e6 if intr > 0 else -1e6)
+            else:
+                ratios.append(intr / ex)
+        
+        # Normalize extremely large values for visualization
+        normalized_ratios = []
+        for r in ratios:
+            if r > 10:
+                normalized_ratios.append(10)
+            elif r < -10:
+                normalized_ratios.append(-10)
+            else:
+                normalized_ratios.append(r)
+        
+        # Plot the trend of this ratio
+        if len(normalized_ratios) > window_size:
+            smoothed_ratio = np.convolve(normalized_ratios, np.ones(window_size)/window_size, mode='valid')
+            plt.plot(
+                range(window_size, len(normalized_ratios) + 1),
+                smoothed_ratio,
+                color="blue",
+                linewidth=2
+            )
+        else:
+            plt.plot(
+                range(1, len(normalized_ratios) + 1),
+                normalized_ratios,
+                color="blue",
+                linewidth=2
+            )
+        
+        # Add a horizontal line at ratio = 1 (balanced rewards)
+        plt.axhline(y=1, color='r', linestyle='--', alpha=0.7, label="Balanced rewards (ratio=1)")
+        plt.axhline(y=0, color='gray', linestyle='-', alpha=0.5)
+        
+        plt.xlabel("Episode")
+        plt.ylabel("Intrinsic/Extrinsic Ratio (capped at ±10)")
+        plt.title("Ratio of Intrinsic to Extrinsic Rewards")
+        plt.grid(True)
+        plt.legend()
+        
+        plt.tight_layout()
+        plt.savefig(f"{self.log_dir}/intrinsic_vs_extrinsic_rewards.png")
         plt.close()
