@@ -6,6 +6,16 @@ import os
 import datetime
 import seaborn as sns
 
+# Global Plotting Configuration
+PLOT_CONFIG = {
+    'font_scale': 1.5,
+    'title_size': 20,
+    'label_size': 18,
+    'tick_size': 12,
+    'legend_size': 12,
+    'dpi': 300,
+    'figure_size': (12, 8)
+}
 
 class DataCollector:
     """Handles logging, data collection, and visualisation for foraging simulations"""
@@ -20,6 +30,16 @@ class DataCollector:
         num_episodes,
         display_info=True
     ):
+        # Plot styling
+        plt.rcParams.update({
+            'font.size': PLOT_CONFIG['font_scale'] * 10,
+            'axes.titlesize': PLOT_CONFIG['title_size'],
+            'axes.labelsize': PLOT_CONFIG['label_size'],
+            'xtick.labelsize': PLOT_CONFIG['tick_size'],
+            'ytick.labelsize': PLOT_CONFIG['tick_size'],
+            'legend.fontsize': PLOT_CONFIG['legend_size']
+        })
+
         # Setup logging directory and file
         self.log_dir = log_dir
         self.log_file = open(f"{log_dir}/simulation_log.txt", "w")
@@ -40,6 +60,7 @@ class DataCollector:
         self.episode_lengths = []
         self.cumulative_rewards = np.zeros(self.n_agents)
         self.cumulative_intrinsic_rewards = np.zeros(self.n_agents)
+        self.episode_actions = [[] for _ in range(n_agents)]
     
         self.max_episodes_to_track = 3  # Number of top episodes to track
         self.episodes_completed = 0
@@ -69,7 +90,7 @@ class DataCollector:
         if self.display_info:
             print(message)
     
-    def update_episode_data(self, episode_num, ep_returns, ep_intrinsic_returns, ep_length, ep_deaths, reached_max_steps):
+    def update_episode_data(self, episode_num, ep_returns, ep_intrinsic_returns, ep_length, ep_deaths, reached_max_steps, ep_actions=None):
         """Update data storage with results from a completed episode"""
         # Calculate survival rate for this episode
         survival_rate = (self.n_agents - ep_deaths) / self.n_agents * 100
@@ -91,6 +112,10 @@ class DataCollector:
         self.top_episodes.append((episode_num, total_ep_reward))
         self.top_episodes.sort(key=lambda x: x[1], reverse=True)
         self.top_episodes = self.top_episodes[:self.max_episodes_to_track]
+
+        if ep_actions is not None:
+            for i in range(len(ep_actions)):
+                self.episode_actions[i].append(ep_actions[i])
         
         # Store episode rewards for each agent
         for i in range(self.n_agents):
@@ -123,6 +148,8 @@ class DataCollector:
         self.log(f"  Survival rate: {survival_rate:.1f}%")
         self.log(f"  Reached max steps: {reached_max_steps}")
         self.log("-" * 40)
+        if ep_actions:
+            self.log(f"  Actions: {[str(actions) for actions in ep_actions]}")
         
         self.episodes_completed += 1
     
@@ -215,7 +242,7 @@ class DataCollector:
         window_size = max(10, int(total_episodes / 100))
         
         # Create a plot for smoothed agent rewards
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=PLOT_CONFIG['figure_size'])
         
         # Create rolling window averages for each agent
         for i, rewards in enumerate(self.episode_rewards):
@@ -246,11 +273,11 @@ class DataCollector:
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/agent_rewards_per_episode.png")
+        plt.savefig(f"{self.log_dir}/agent_rewards_per_episode.png", dpi=PLOT_CONFIG['dpi'])
         plt.close()
 
         # Plot average episodic reward
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=PLOT_CONFIG["figure_size"])
         
         # Compute cumulative average reward
         avg_episodic_reward = np.cumsum(self.avg_episode_rewards) / np.arange(
@@ -285,7 +312,7 @@ class DataCollector:
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/average_episodic_reward.png")
+        plt.savefig(f"{self.log_dir}/average_episodic_reward.png", dpi=PLOT_CONFIG['dpi'])
         plt.close()
 
     def _plot_intrinsic_rewards(self):
@@ -303,8 +330,8 @@ class DataCollector:
         """
         total_episodes = len(self.episode_intrinsic_rewards[0])
         window_size = max(10, int(total_episodes / 100))
-        
-        plt.figure(figsize=(12, 9))
+
+        plt.figure(figsize=PLOT_CONFIG["figure_size"])
 
         # Intrinsic rewards subplot - smoothed version
         plt.subplot(2, 1, 1)
@@ -376,7 +403,7 @@ class DataCollector:
         plt.grid(True)
 
         plt.tight_layout(h_pad=1)
-        plt.savefig(f"{self.log_dir}/intrinsic_rewards_plot.png")
+        plt.savefig(f"{self.log_dir}/intrinsic_rewards_plot.png", dpi=PLOT_CONFIG['dpi'])
         plt.close()
 
     def _plot_episode_lengths(self):
@@ -389,7 +416,7 @@ class DataCollector:
         total_episodes = len(self.episode_lengths)
         window_size = max(10, int(total_episodes / 50))
             
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=PLOT_CONFIG["figure_size"])
         
         # Calculate rolling average
         rolling_avg = np.convolve(
@@ -422,7 +449,7 @@ class DataCollector:
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/episode_length_over_time.png")
+        plt.savefig(f"{self.log_dir}/episode_length_over_time.png", dpi=PLOT_CONFIG['dpi'])
         plt.close()
 
     def _plot_intrinsic_vs_extrinsic_rewards(self):
@@ -437,7 +464,7 @@ class DataCollector:
         total_episodes = len(self.episode_rewards[0])
         window_size = max(10, int(total_episodes / 100))
         
-        plt.figure(figsize=(12, 10))
+        plt.figure(figsize=PLOT_CONFIG["figure_size"])
         
         # Subplot 1: Intrinsic vs Extrinsic rewards over time
         plt.subplot(2, 1, 1)
@@ -538,5 +565,5 @@ class DataCollector:
         plt.legend()
         
         plt.tight_layout()
-        plt.savefig(f"{self.log_dir}/intrinsic_vs_extrinsic_rewards.png")
+        plt.savefig(f"{self.log_dir}/intrinsic_vs_extrinsic_rewards.png", dpi=PLOT_CONFIG["dpi"])
         plt.close()

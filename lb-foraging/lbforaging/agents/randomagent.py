@@ -22,17 +22,11 @@ class RandomForagingAgent(BaseForagingAgent):
 
     def step(self, obs):
                 
-        print(f"AGENT POSITION {self.position}")
-        
         state = self.get_state(obs)
 
         action = self.choose_action(state)
         # print(f"Chosen action: {action}")
 
         self.energy -= self.survival_cost  # Deduct survival cost
-
-        reward = self.energy  # Reward is the agent's current energy level
-
-        print(f"Energy level: {self.energy}, Reward: {reward}")
 
         return action

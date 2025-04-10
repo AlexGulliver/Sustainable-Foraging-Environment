@@ -209,7 +209,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.current_state = current_state
 
         print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
-        print(f"AGENT POSITION {self.position}")
+
         # Increment steps
         self.steps_done += 1
 
@@ -236,7 +236,6 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
                 )
             )
 
-            # Train the model if networks are initialised
             self.optimise_model()
 
             # Update target network

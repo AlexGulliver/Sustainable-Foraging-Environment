@@ -4,14 +4,14 @@ from foragingtrainer import ForagingTrainer
 
 if __name__ == "__main__":
     trainer = ForagingTrainer(
-        env_name="SustainableForagingEnv-v0",  # Environment to use
-        max_steps=50,                          # Maximum number of steps per episode
-        num_episodes=2500,                     # Number of episodes to run
-        agent_type="curious_dqn",              # Choose from: "random", "qlearning", "dqn", "curious_dqn"
-        starting_energy=10,                    # Initial energy for agents
-        display_info=True,                     # Whether to display detailed info during training
-        log_dir=None,                          # Directory to save logs (None for auto-generated)
-        render_mode=None,                      # Rendering mode (None for no rendering and faster training, "human" for human rendering)
+        env_name="SustainableForagingEnv-v0", # Environment to use
+        max_steps=100, # Maximum number of steps per episode
+        num_episodes=100, # Number of episodes to run
+        agent_type="random", # Choose from: "random", "qlearning", "dqn", "curious_dqn"
+        starting_energy=10, # Initial energy for agents
+        display_info=True, # Whether to display detailed info during training
+        log_dir=None, # Directory to save logs (None for auto-generated)
+        render_mode=None, # Rendering mode (None for no rendering and faster training, "human" for human rendering)
     )
     
     trainer.train()

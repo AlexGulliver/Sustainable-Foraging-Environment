@@ -44,7 +44,8 @@ _BLACK = (0, 0, 0)
 _WHITE = (255, 255, 255)
 _GREEN = (0, 255, 0)
 _RED = (255, 0, 0)
-_GRASS_GREEN = (111, 186, 71)
+_BROWN = (34, 32, 52)
+_GRASS_GREEN = (55, 148, 110)
 
 _BACKGROUND_COLOR = _GRASS_GREEN
 _GRID_COLOR = _BLACK
@@ -132,6 +133,7 @@ class Viewer(object):
         return arr if return_rgb_array else self.isopen
 
     def _draw_grid(self):
+        glLineWidth(6.0)
         batch = pyglet.graphics.Batch()
         # vertical lines
         for r in range(self.rows + 1):
@@ -148,7 +150,7 @@ class Viewer(object):
                         (self.grid_size + 1) * r + 1,  # Y
                     ),
                 ),
-                ("c3B", (*_BLACK, *_BLACK)),
+                ("c3B", (*_BROWN, *_BROWN)),
             )
 
         # horizontal lines
@@ -166,7 +168,7 @@ class Viewer(object):
                         (self.grid_size + 1) * self.rows,  # TOP X
                     ),
                 ),
-                ("c3B", (*_BLACK, *_BLACK)),
+                ("c3B", (*_BROWN, *_BROWN)),
             )
         batch.draw()
 

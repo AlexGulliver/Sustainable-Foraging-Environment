@@ -111,7 +111,6 @@ class ForagingTrainer:
         # Setup agents with the environment
         for i, (player, agent) in enumerate(zip(self.env.unwrapped.players, self.agents)):
             player.set_controller(agent)
-            agent.position = player.position
             agent.energy = self.starting_energy
         
         # Record start time
@@ -124,6 +123,7 @@ class ForagingTrainer:
             ep_intrinsic_returns = np.zeros(self.n_agents)
             ep_length = 0
             ep_deaths = 0
+            ep_actions = [[] for _ in range(self.n_agents)]
             
             # Reset environment for new episode
             obss, _ = self.env.reset()
@@ -131,7 +131,6 @@ class ForagingTrainer:
             # Respawn all agents for new episode
             for i, (player, agent) in enumerate(zip(self.env.unwrapped.players, self.agents)):
                 player.set_controller(agent)
-                agent.position = player.position
                 agent.energy = self.starting_energy  # Reset to initial energy
 
             if self.render_mode is not None:
@@ -139,7 +138,6 @@ class ForagingTrainer:
             
             # Log episode start
             self.logger.log(f"\nEpisode {episode + 1} started")
-            self.logger.log(f"Initial positions: {[agent.position for agent in self.agents]}")
             self.logger.log(f"Initial energy: {[agent.energy for agent in self.agents]}")
             
             # Track which agents die during this episode
@@ -148,11 +146,13 @@ class ForagingTrainer:
             # Episode loop
             for step in range(self.max_steps):
                 # Agents with 0 energy should not act
+                # time.sleep(4)
                 actions = []
                 for i, (agent, obs) in enumerate(zip(self.agents, obss)):
                     if agent.energy > 0:
                         action = agent.step(obs)
                         actions.append(action)
+                        ep_actions[i].append(action)
                     else:
                         actions.append(None)
                         # If agent just died this step
@@ -202,7 +202,7 @@ class ForagingTrainer:
                 
                 # Detailed step logging
                 if self.display_info:
-                    self.logger.log(f"  Step {step + 1}: Rewards {rews}, Energy {[agent.energy for agent in self.agents]}")
+                    self.logger.log(f"  Step {step + 1}: Rewards {rews}, Energy {[agent.energy for agent in self.agents]}, Actions {actions}, Positions {[player.position for player in self.env.unwrapped.players]}")
                 
                 ep_length += 1
                 if self.render_mode is not None:
@@ -226,7 +226,8 @@ class ForagingTrainer:
                 ep_intrinsic_returns,
                 ep_length,
                 ep_deaths,
-                reached_max_steps
+                reached_max_steps,
+                ep_actions
             )
         
         # Calculate and record elapsed time

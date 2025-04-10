@@ -85,6 +85,21 @@ class ForwardModel(nn.Module):
 
         return next_state_pred
 
+# Inverse Model for predicting actions from state transitions
+class InverseModel(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=128):
+        super(InverseModel, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(state_dim * 2, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim),
+        )
+
+    def forward(self, state, next_state):
+        # Concatenate state and next_state
+        x = torch.cat([state, next_state], dim=1)
+        return self.model(x)  # Returns logits for action classification
+
 
 class CuriosityDrivenDQNAgent(BaseForagingAgent):
     """Foraging Agent with Deep Q-Learning and Curiosity-Driven Exploration"""
@@ -103,7 +118,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.memory_size = 10000  # Replay memory size
 
         # Curiosity parameters
-        self.curiosity_weight = 0.5  # Weight for intrinsic reward
+        self.curiosity_weight = 0.25  # Weight for intrinsic reward
         self.curiosity_lr = 0.0001  # Learning rate for curiosity model
         self.curiosity_decay = 0.9999
 
@@ -145,6 +160,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
         # Initialise curiosity model
         self.forward_model = ForwardModel(self.input_dim, self.output_dim)
+        self.inverse_model = InverseModel(self.input_dim, self.output_dim)
+        self.inverse_optimiser = optim.Adam(self.inverse_model.parameters(), lr=self.curiosity_lr)
+
 
         # Initialise optimisers
         self.q_optimiser = optim.Adam(
@@ -292,10 +310,27 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             state_batch, batch.action, torch.cat(batch.next_state)
         )
 
+        inverse_loss = self.update_inverse_model(
+        state_batch, torch.cat(batch.next_state), batch.action
+        )
+        
         # Decay epsilon
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
-
         return q_loss.item(), curiosity_loss
+    
+    def update_inverse_model(self, state_batch, next_state_batch, action_batch):
+        action_indices = torch.tensor(
+            [list(Action).index(a) for a in action_batch], dtype=torch.long
+        )
+        logits = self.inverse_model(state_batch, next_state_batch)
+        loss = F.cross_entropy(logits, action_indices)
+
+        self.inverse_optimiser.zero_grad()
+        loss.backward()
+        self.inverse_optimiser.step()
+
+        return loss.item()
+
 
     def step(self, obs):
         """Take a step in the environment"""
@@ -322,7 +357,6 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.current_state = current_state
 
         print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
-        # print(f"AGENT POSITION {self.position}")
         # Increment steps
         self.steps_done += 1
         return action
