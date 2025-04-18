@@ -47,9 +47,9 @@ register(
     entry_point="lbforaging.foraging:ForagingEnv",
     kwargs={
         "players": 1,
-        "field_size": (2, 2),
-        "max_num_food": 3,
-        "sight": 3,
+        "field_size": (3, 3),
+        "max_num_food": 1,
+        "sight": 5,
         "max_episode_steps": 100,
         "grid_observation": False,
         "penalty": 0.1,

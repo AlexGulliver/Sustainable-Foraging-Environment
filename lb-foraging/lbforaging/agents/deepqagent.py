@@ -208,7 +208,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.last_action = action
         self.current_state = current_state
 
-        print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
+        # print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
 
         # Increment steps
         self.steps_done += 1
@@ -242,4 +242,4 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
             if self.steps_done % self.target_update == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
-        print(f"Received reward: {reward}, action {self.last_action}")
+        # print(f"Received reward: {reward}, action {self.last_action}")

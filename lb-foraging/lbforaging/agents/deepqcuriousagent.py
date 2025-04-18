@@ -118,14 +118,14 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.memory_size = 10000  # Replay memory size
 
         # Curiosity parameters
-        self.curiosity_weight = 0.25  # Weight for intrinsic reward
-        self.curiosity_lr = 0.0001  # Learning rate for curiosity model
+        self.curiosity_weight = 0.5  # Weight for intrinsic reward
+        self.curiosity_lr = 0.001  # Learning rate for curiosity model
         self.curiosity_decay = 0.9999
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
         
-        # Initialize input_dim to None, will be set in the first step
+        # Initialise input_dim to None, will be set in the first step
         self.input_dim = None
 
         # Initialise replay memory
@@ -181,13 +181,13 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
         
-        # Initialize networks if this is the first time we're seeing data
+        # Initialise networks if this is the first time seeing data
         if self.input_dim is None:
             self._initialise_networks(len(state))
         
         # Handle case where observation dimension changes
         if len(state) != self.input_dim:
-            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
+            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitialising networks.")
             self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
@@ -356,7 +356,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.last_action = action
         self.current_state = current_state
 
-        print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
+        # print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
         # Increment steps
         self.steps_done += 1
         return action
@@ -395,12 +395,12 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
                 loss_info = self.optimise_model()
                 if loss_info and self.steps_done % 10 == 0:
                     q_loss, curiosity_loss = loss_info
-                    print(
-                        f"Step {self.steps_done}: Q-Loss: {q_loss:.4f}, Curiosity Loss: {curiosity_loss:.4f}"
-                    )
+                    # print(
+                    #     f"Step {self.steps_done}: Q-Loss: {q_loss:.4f}, Curiosity Loss: {curiosity_loss:.4f}"
+                    # )
 
             # Update target network
             if self.steps_done % self.target_update == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
 
-        print(f"Received reward: {reward}, action {self.last_action}")
+        # print(f"Received reward: {reward}, action {self.last_action}")

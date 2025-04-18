@@ -1,4 +1,4 @@
-"""Handles logging, data collection, and visualisation for foraging simulations"""
+"""Handles logging, data collection, and data visualisation for foraging simulations"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +18,6 @@ PLOT_CONFIG = {
 }
 
 class DataCollector:
-    """Handles logging, data collection, and visualisation for foraging simulations"""
     
     def __init__(
         self, 
@@ -148,10 +147,35 @@ class DataCollector:
         self.log(f"  Survival rate: {survival_rate:.1f}%")
         self.log(f"  Reached max steps: {reached_max_steps}")
         self.log("-" * 40)
-        if ep_actions:
-            self.log(f"  Actions: {[str(actions) for actions in ep_actions]}")
+        # if ep_actions:
+        #     self.log(f"  Actions: {[str(actions) for actions in ep_actions]}")
         
         self.episodes_completed += 1
+
+    def save_episode_data(self, save_path):
+        """Save episode-by-episode data to CSV files for external analysis"""
+        import csv
+        
+        # Save average rewards per episode
+        with open(f"{save_path}/episode_rewards.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Episode", "Average_Reward"])
+            for i, reward in enumerate(self.avg_episode_rewards):
+                writer.writerow([i+1, reward])
+        
+        # Save episode lengths
+        with open(f"{save_path}/episode_lengths.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Episode", "Length"])
+            for i, length in enumerate(self.episode_lengths):
+                writer.writerow([i+1, length])
+        
+        # Save survival rates
+        with open(f"{save_path}/episode_survival.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Episode", "Survival_Rate"])
+            for i, rate in enumerate(self.episode_survival_rates):
+                writer.writerow([i+1, rate])
     
     def generate_summary(self, elapsed_time):
         """Generate and log summary statistics and create visualisation plots"""
@@ -454,7 +478,7 @@ class DataCollector:
 
     def _plot_intrinsic_vs_extrinsic_rewards(self):
         """
-        Plots intrinsic vs extrinsic rewards for curious DQN agent to visualize
+        Plots intrinsic vs extrinsic rewards for curious DQN agent to visualise
         the balance between exploration and exploitation during training.
         """
         if self.agent_type != "curious_dqn" or len(self.episode_rewards[0]) == 0:
@@ -473,7 +497,7 @@ class DataCollector:
         avg_extrinsic = self.avg_episode_rewards
         avg_intrinsic = self.avg_episode_intrinsic_rewards
         
-        # Calculate smoothed versions for better visualization
+        # Calculate smoothed versions for better visualisation
         if len(avg_extrinsic) > window_size:
             smoothed_extrinsic = np.convolve(avg_extrinsic, np.ones(window_size)/window_size, mode='valid')
             smoothed_intrinsic = np.convolve(avg_intrinsic, np.ones(window_size)/window_size, mode='valid')
@@ -527,29 +551,29 @@ class DataCollector:
             else:
                 ratios.append(intr / ex)
         
-        # Normalize extremely large values for visualization
-        normalized_ratios = []
+        # Normalise extremely large values for visualisation
+        normalised_ratios = []
         for r in ratios:
             if r > 10:
-                normalized_ratios.append(10)
+                normalised_ratios.append(10)
             elif r < -10:
-                normalized_ratios.append(-10)
+                normalised_ratios.append(-10)
             else:
-                normalized_ratios.append(r)
+                normalised_ratios.append(r)
         
         # Plot the trend of this ratio
-        if len(normalized_ratios) > window_size:
-            smoothed_ratio = np.convolve(normalized_ratios, np.ones(window_size)/window_size, mode='valid')
+        if len(normalised_ratios) > window_size:
+            smoothed_ratio = np.convolve(normalised_ratios, np.ones(window_size)/window_size, mode='valid')
             plt.plot(
-                range(window_size, len(normalized_ratios) + 1),
+                range(window_size, len(normalised_ratios) + 1),
                 smoothed_ratio,
                 color="blue",
                 linewidth=2
             )
         else:
             plt.plot(
-                range(1, len(normalized_ratios) + 1),
-                normalized_ratios,
+                range(1, len(normalised_ratios) + 1),
+                normalised_ratios,
                 color="blue",
                 linewidth=2
             )

@@ -235,6 +235,9 @@ class ForagingTrainer:
         
         # Generate summary statistics and plots
         self.logger.generate_summary(elapsed_time)
+
+        # Save episode data for aggregates
+        self.logger.save_episode_data(self.log_dir)
         
         # Close environment
         self.env.close()

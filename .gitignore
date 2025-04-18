@@ -15,6 +15,7 @@ rewards_plot.png
 
 # Ignore all log directories
 logs_*/
+aggregate_*/
 
 # Ignore specific log files
 *.log
