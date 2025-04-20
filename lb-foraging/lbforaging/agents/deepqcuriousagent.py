@@ -109,7 +109,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
         # DQN parameters
         self.gamma = 0.99  # Discount factor
-        self.epsilon = 0.1  # Initial exploration rate
+        self.epsilon = 0.5  # Initial exploration rate
         self.epsilon_decay = 0.995  # Decay rate for epsilon
         self.epsilon_min = 0.01  # Minimum epsilon value
         self.batch_size = 64  # Batch size for training
