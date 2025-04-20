@@ -113,7 +113,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.epsilon_decay = 0.995  # Decay rate for epsilon
         self.epsilon_min = 0.01  # Minimum epsilon value
         self.batch_size = 64  # Batch size for training
-        self.target_update = 10  # How often to update target network (steps)
+        self.target_update = 5  # How often to update target network (steps)
         self.learning_rate = 0.001  # Learning rate
         self.memory_size = 10000  # Replay memory size
 

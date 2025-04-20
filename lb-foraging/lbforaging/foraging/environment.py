@@ -698,7 +698,7 @@ class ForagingEnv(gym.Env):
                 continue
             
             # Only the current player gets energy
-            player.controller.energy += 5
+            player.controller.energy += 3
             player.reward = math.log(player.controller.energy)
 
             # Remove the food

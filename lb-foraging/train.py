@@ -7,7 +7,7 @@ if __name__ == "__main__":
         env_name="SustainableForagingEnv-v0", # Environment to use
         max_steps=30, # Maximum number of steps per episode
         num_episodes=20000, # Number of episodes to run
-        agent_type="dqn", # Choose from: "random", "qlearning", "dqn", "curious_dqn"
+        agent_type="curious_dqn", # Choose from: "random", "qlearning", "dqn", "curious_dqn"
         starting_energy=10, # Initial energy for agents
         display_info=True, # Whether to display detailed info during training
         log_dir=None, # Directory to save logs (None for auto-generated)
