@@ -698,8 +698,7 @@ class ForagingEnv(gym.Env):
                 continue
             
             # Only the current player gets energy
-            player.controller.energy += 3
-            player.reward = math.log(player.controller.energy)
+            player.controller.energy += 10 
 
             # Remove the food
             self.field[frow, fcol] = 0
@@ -720,11 +719,11 @@ class ForagingEnv(gym.Env):
                 p.controller.notify_food_loaded(True)
 
             # REWARD FUNCTION
-            # if p.controller.energy > 0:
-            #     p.reward = 10 * math.log(p.controller.energy)
-            #     # p.reward = p.controller.energy
-            # else:
-            #     p.reward = 0  # Assign 0 reward if energy is zero
+            if p.controller.energy > 0:
+                # a.reward = 10 * math.log(a.controller.energy)
+                p.reward = math.log(p.controller.energy)
+            else:
+                p.reward = 0  # Assign 0 reward if energy is zero
 
             if p.controller.energy > 0:
                 p.controller.receive_reward(p.reward)

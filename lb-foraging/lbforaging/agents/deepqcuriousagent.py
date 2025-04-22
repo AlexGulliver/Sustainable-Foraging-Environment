@@ -1,3 +1,5 @@
+"""Curiosity-driven Deep Q-Learning Agent for Foraging Tasks"""
+
 import random
 import numpy as np
 import torch
@@ -32,9 +34,9 @@ class ReplayMemory:
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, output_dim)
+        self.fc1 = nn.Linear(input_dim, 256)
+        self.fc2 = nn.Linear(256, 256)
+        self.fc3 = nn.Linear(256, output_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -109,16 +111,16 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
         # DQN parameters
         self.gamma = 0.99  # Discount factor
-        self.epsilon = 0.5  # Initial exploration rate
+        self.epsilon = 1  # Initial exploration rate
         self.epsilon_decay = 0.995  # Decay rate for epsilon
         self.epsilon_min = 0.01  # Minimum epsilon value
-        self.batch_size = 64  # Batch size for training
+        self.batch_size = 256  # Batch size for training
         self.target_update = 5  # How often to update target network (steps)
         self.learning_rate = 0.001  # Learning rate
         self.memory_size = 10000  # Replay memory size
 
         # Curiosity parameters
-        self.curiosity_weight = 0.5  # Weight for intrinsic reward
+        self.curiosity_weight = 0.75  # Weight for intrinsic reward
         self.curiosity_lr = 0.001  # Learning rate for curiosity model
         self.curiosity_decay = 0.9999
 
@@ -165,12 +167,8 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
 
         # Initialise optimisers
-        self.q_optimiser = optim.Adam(
-            self.policy_net.parameters(), lr=self.learning_rate
-        )
-        self.curiosity_optimiser = optim.Adam(
-            self.forward_model.parameters(), lr=self.curiosity_lr
-        )
+        self.q_optimiser = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
+        self.curiosity_optimiser = optim.Adam(self.forward_model.parameters(), lr=self.curiosity_lr)
 
     def get_state(self, obs):
         """Convert observation to a state representation"""
@@ -178,7 +176,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
     def preprocess_state(self, obs):
         """Convert observation to tensor for DQN input"""
-        # Flatten and normalize the observation
+        # Flatten and normalise the observation
         state = np.array(obs, dtype=np.float32)
         
         # Initialise networks if this is the first time seeing data
@@ -198,7 +196,6 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             # Random action
             return random.choice(list(Action))
         else:
-            # Greedy action
             with torch.no_grad():
                 q_values = self.policy_net(state)
                 action_idx = q_values.max(1)[1].item()
@@ -260,7 +257,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         if valid_next_states:
             non_final_next_states = torch.cat(valid_next_states)
         else:
-            # If there are no valid next states, we can't optimize yet
+            # If there are no valid next states, we can't optimise yet
             return
 
         # Prepare batch data
@@ -288,9 +285,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             ).max(1)[0]
 
         # Compute the expected Q values
-        expected_state_action_values = combined_reward_batch + (
-            self.gamma * next_state_values
-        )
+        expected_state_action_values = combined_reward_batch + (self.gamma * next_state_values)
 
         # Compute Huber loss
         q_loss = F.smooth_l1_loss(
@@ -300,7 +295,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         # Optimise the model
         self.q_optimiser.zero_grad()
         q_loss.backward()
-        # Clip gradients to stabilize training
+        # Clip gradients to stabilise training
         for param in self.policy_net.parameters():
             param.grad.data.clamp_(-1, 1)
         self.q_optimiser.step()
@@ -359,6 +354,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         # print(f"Energy level: {self.energy}, Steps done: {self.steps_done}")
         # Increment steps
         self.steps_done += 1
+
         return action
 
     def receive_reward(self, reward):
@@ -395,12 +391,11 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
                 loss_info = self.optimise_model()
                 if loss_info and self.steps_done % 10 == 0:
                     q_loss, curiosity_loss = loss_info
-                    # print(
-                    #     f"Step {self.steps_done}: Q-Loss: {q_loss:.4f}, Curiosity Loss: {curiosity_loss:.4f}"
-                    # )
 
             # Update target network
             if self.steps_done % self.target_update == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
+
+
 
         # print(f"Received reward: {reward}, action {self.last_action}")

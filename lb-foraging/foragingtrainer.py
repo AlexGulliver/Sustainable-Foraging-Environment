@@ -22,6 +22,7 @@ class ForagingTrainer:
         num_episodes,
         agent_type,
         starting_energy,
+        energy_cost,
         display_info=True,
         log_dir=None,
         render_mode=None,
@@ -61,11 +62,7 @@ class ForagingTrainer:
         
         # Setup agent parameters
         self.agent_params = {
-            "eta": 0.5,
-            "carry_capacity": 5,
-            "survival_cost": 1,
-            "tau": 0,
-            "k": 1,
+            "survival_cost": energy_cost,
         }
         
         # Create agents
@@ -241,19 +238,3 @@ class ForagingTrainer:
         
         # Close environment
         self.env.close()
-
-
-# if __name__ == "__main__":
-#     # Configure your training parameters directly here
-#     trainer = ForagingTrainer(
-#         env_name="SustainableForagingEnv-v0",  # Environment to use
-#         max_steps=30,                          # Maximum number of steps per episode
-#         num_episodes=1000,                     # Number of episodes to run
-#         agent_type="dqn",                      # Choose from: "random", "qlearning", "dqn", "curious_dqn"
-#         starting_energy=10,                    # Initial energy for agents
-#         display_info=True,                     # Whether to display detailed info during training
-#         log_dir=None                           # Directory to save logs (None for auto-generated)
-#     )
-    
-#     # Start training
-#     trainer.train()

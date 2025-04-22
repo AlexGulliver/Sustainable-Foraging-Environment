@@ -1,11 +1,21 @@
+"""Aggregated trainer for running multiple simulations with 
+different agent types and generating summary statistics and plots."""
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 from foragingtrainer import ForagingTrainer
 
-def run_multiple_simulations(agent_types, num_runs=10, env_name="SustainableForagingEnv-v0", 
-                            max_steps=30, num_episodes=1000, starting_energy=10):
+def run_multiple_simulations(
+        agent_types, 
+        num_runs, 
+        max_steps, 
+        num_episodes, 
+        starting_energy, 
+        energy_cost,
+        env_name="SustainableForagingEnv-v0"
+        ):
     """Run multiple simulations for each agent type and collect aggregate results"""
     # Create directory for aggregate results
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -42,6 +52,7 @@ def run_multiple_simulations(agent_types, num_runs=10, env_name="SustainableFora
                 num_episodes=num_episodes,
                 agent_type=agent_type,
                 starting_energy=starting_energy,
+                energy_cost=energy_cost,
                 display_info=False,
                 log_dir=run_log_dir,
                 render_mode=None,
@@ -74,9 +85,9 @@ def run_multiple_simulations(agent_types, num_runs=10, env_name="SustainableFora
     # Generate summary statistics and plots
     generate_summary(results, agent_types, num_runs, results_dir, num_episodes)
     
-    return results, results_dir
+    return results, results_dir, num_runs
 
-def plot_learning_curves(results_dir, agent_types, num_runs=10):
+def plot_learning_curves(results_dir, agent_types, num_runs):
     """Plot learning curves from saved episode data"""
     import pandas as pd
     import numpy as np
@@ -228,7 +239,7 @@ def generate_summary(results, agent_types, num_runs, results_dir, num_episodes):
     # Create summary file
     with open(f"{results_dir}/aggregate_summary.txt", "w") as f:
         f.write(f"Aggregate Results Summary\n")
-        f.write(f"========================\n")
+        f.write(f"="*30)
         f.write(f"Number of runs per agent type: {num_runs}\n")
         f.write(f"Number of episodes per run: {num_episodes}\n\n")
         
@@ -327,21 +338,3 @@ def generate_comparison_plots(results, agent_types, results_dir):
         # Save the figure with high DPI
         plt.savefig(f"{results_dir}/{metric_key}_comparison.png", dpi=300, bbox_inches='tight')
         plt.close()
-    
-    # Learning curve comparison (if episode data is available)
-    # Note: This would require modifying your ForagingTrainer to store episode-by-episode data
-
-if __name__ == "__main__":
-    agent_types = ["random", "dqn", "curious_dqn"]
-    
-    # Run simulations
-    results, results_dir = run_multiple_simulations(
-        agent_types=agent_types,
-        num_runs=30,
-        num_episodes=20000,
-        max_steps=50
-    )
-
-    plot_learning_curves(results_dir, agent_types, num_runs=30)
-    
-    print(f"\nSimulation completed! Aggregate results saved to {results_dir}")
