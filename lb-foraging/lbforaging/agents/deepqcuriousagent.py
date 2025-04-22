@@ -165,7 +165,6 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.inverse_model = InverseModel(self.input_dim, self.output_dim)
         self.inverse_optimiser = optim.Adam(self.inverse_model.parameters(), lr=self.curiosity_lr)
 
-
         # Initialise optimisers
         self.q_optimiser = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
         self.curiosity_optimiser = optim.Adam(self.forward_model.parameters(), lr=self.curiosity_lr)
@@ -395,7 +394,5 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             # Update target network
             if self.steps_done % self.target_update == 0:
                 self.target_net.load_state_dict(self.policy_net.state_dict())
-
-
 
         # print(f"Received reward: {reward}, action {self.last_action}")

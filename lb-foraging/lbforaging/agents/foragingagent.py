@@ -10,7 +10,6 @@ class BaseForagingAgent(BaseAgent, ABC):
         self.name = "Base Foraging Agent"
         self.energy = int  # Initial energy level
         self.survival_cost = agent_params.get("survival_cost", 1)  # Default value
-        self.movement_cost = 1
         self.invalid_action = False
         self.reward = 0
 
