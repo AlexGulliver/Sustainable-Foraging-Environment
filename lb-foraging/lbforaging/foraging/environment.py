@@ -712,11 +712,8 @@ class ForagingEnv(gym.Env):
         )
         self._gen_valid_moves()
 
-        # Verify food has been loaded to agents
+        # Assign reward and update energy
         for p in self.players:
-            if p.score > p.previous_score:
-                # Confirm food has been loaded
-                p.controller.notify_food_loaded(True)
 
             # REWARD FUNCTION
             if p.controller.energy > 0:
