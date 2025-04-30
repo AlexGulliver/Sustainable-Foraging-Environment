@@ -258,42 +258,42 @@ class ForagingEnv(gym.Env):
             and player.position[0] == row
         ]
     
-    # Bottom right corner food spawn
-    def spawn_food(self, max_num_food):
-        food_count = 0
-        attempts = 0
-
-        row, col = 2, 2  # Bottom-right cell in a 3x3 grid
-
-        while food_count < max_num_food and attempts < 1000:
-            attempts += 1
-
-            if not self._is_empty_location(row, col):
-                continue
-
-            self.field[row, col] = 1
-            food_count += 1
-
-        self._food_spawned = self.field.sum()
-
-
-    # # Original food spawn
+    # # Bottom right corner food spawn
     # def spawn_food(self, max_num_food):
     #     food_count = 0
     #     attempts = 0
+
+    #     row, col = 2, 2  # Bottom-right cell in a 3x3 grid
+
     #     while food_count < max_num_food and attempts < 1000:
     #         attempts += 1
-    #         row = self.np_random.integers(0, self.rows)
-    #         col = self.np_random.integers(0, self.cols)
-    #         # check if it has neighbors:
+
     #         if not self._is_empty_location(row, col):
-    #             # print(f"Blocked location at ({row}, {col})")
     #             continue
 
     #         self.field[row, col] = 1
-
     #         food_count += 1
+
     #     self._food_spawned = self.field.sum()
+
+
+    # Original food spawn
+    def spawn_food(self, max_num_food):
+        food_count = 0
+        attempts = 0
+        while food_count < max_num_food and attempts < 1000:
+            attempts += 1
+            row = self.np_random.integers(0, self.rows)
+            col = self.np_random.integers(0, self.cols)
+            # check if it has neighbors:
+            if not self._is_empty_location(row, col):
+                # print(f"Blocked location at ({row}, {col})")
+                continue
+
+            self.field[row, col] = 1
+
+            food_count += 1
+        self._food_spawned = self.field.sum()
 
     # Spawn food in bottom corners 
     # def spawn_food(self, max_num_food):
@@ -341,67 +341,67 @@ class ForagingEnv(gym.Env):
     #     self._food_spawned = self.field.sum()
 
     # Replenish food only in the bottom-right corner of the field
-    def replenish_food(self, replenishment_rate, previous_field, max_food):
-        """
-        Replenishes food only in the bottom-right corner (2,2),
-        ensuring total food never exceeds max_food.
-        """
-        current_food_count = self.field.sum()
-        remaining_food_slots = max_food - current_food_count
-
-        if remaining_food_slots <= 0:
-            return
-
-        row, col = 2, 2  # Bottom-right cell
-
-        if self._is_empty_location(row, col) and self.np_random.uniform() < replenishment_rate:
-            self.field[row, col] = 1
-
-        self._food_spawned = self.field.sum()
-
-
-    # # Replenish food randomly across the field
     # def replenish_food(self, replenishment_rate, previous_field, max_food):
     #     """
-    #     Replenishes food randomly across the field, ensuring total food
-    #     never exceeds max_food."""
-    #     # Count current food items
+    #     Replenishes food only in the bottom-right corner (2,2),
+    #     ensuring total food never exceeds max_food.
+    #     """
     #     current_food_count = self.field.sum()
-
-    #     # Calculate how many more food items can be added
     #     remaining_food_slots = max_food - current_food_count
 
-    #     # If no more food can be added, return
     #     if remaining_food_slots <= 0:
     #         return
 
-    #     # Create a list of all empty locations
-    #     empty_locations = [
-    #         (row, col)
-    #         for row in range(self.rows)
-    #         for col in range(self.cols)
-    #         if self._is_empty_location(row, col)
-    #     ]
+    #     row, col = 2, 2  # Bottom-right cell
 
-    #     # Shuffle the empty locations to ensure random placement
-    #     self.np_random.shuffle(empty_locations)
+    #     if self._is_empty_location(row, col) and self.np_random.uniform() < replenishment_rate:
+    #         self.field[row, col] = 1
 
-    #     # Track newly added food
-    #     food_added = 0
-
-    #     # Randomly place food in empty locations
-    #     for row, col in empty_locations:
-    #         # Stop if reached max food limit
-    #         if food_added >= remaining_food_slots:
-    #             break
-
-    #         # Spawn food with replenishment rate
-    #         if self.np_random.uniform() < replenishment_rate:
-    #             self.field[row, col] = 1
-    #             food_added += 1
-
-    #     # Update food spawned count
     #     self._food_spawned = self.field.sum()
+
+
+    # # Replenish food randomly across the field
+    def replenish_food(self, replenishment_rate, previous_field, max_food):
+        """
+        Replenishes food randomly across the field, ensuring total food
+        never exceeds max_food."""
+        # Count current food items
+        current_food_count = self.field.sum()
+
+        # Calculate how many more food items can be added
+        remaining_food_slots = max_food - current_food_count
+
+        # If no more food can be added, return
+        if remaining_food_slots <= 0:
+            return
+
+        # Create a list of all empty locations
+        empty_locations = [
+            (row, col)
+            for row in range(self.rows)
+            for col in range(self.cols)
+            if self._is_empty_location(row, col)
+        ]
+
+        # Shuffle the empty locations to ensure random placement
+        self.np_random.shuffle(empty_locations)
+
+        # Track newly added food
+        food_added = 0
+
+        # Randomly place food in empty locations
+        for row, col in empty_locations:
+            # Stop if reached max food limit
+            if food_added >= remaining_food_slots:
+                break
+
+            # Spawn food with replenishment rate
+            if self.np_random.uniform() < replenishment_rate:
+                self.field[row, col] = 1
+                food_added += 1
+
+        # Update food spawned count
+        self._food_spawned = self.field.sum()
 
     def _is_empty_location(self, row, col):
         if self.field[row, col] != 0:
@@ -412,28 +412,28 @@ class ForagingEnv(gym.Env):
 
         return True
 
-    # def spawn_players(self):
-    #     for player in self.players:
-    #         attempts = 0
-    #         player.reward = 0
-
-    #         while attempts < 1000:
-    #             row = self.np_random.integers(0, self.rows)
-    #             col = self.np_random.integers(0, self.cols)
-    #             if self._is_empty_location(row, col):
-    #                 player.setup(
-    #                     (row, col),
-    #                     self.field_size,
-    #                 )
-    #                 break
-    #             attempts += 1
-
-    # Spawn players in top left corner
     def spawn_players(self):
         for player in self.players:
+            attempts = 0
             player.reward = 0
-            # Set player position to the upper-left corner (0,0)
-            player.setup((0, 0), self.field_size)
+
+            while attempts < 1000:
+                row = self.np_random.integers(0, self.rows)
+                col = self.np_random.integers(0, self.cols)
+                if self._is_empty_location(row, col):
+                    player.setup(
+                        (row, col),
+                        self.field_size,
+                    )
+                    break
+                attempts += 1
+
+    # Spawn players in top left corner
+    # def spawn_players(self):
+    #     for player in self.players:
+    #         player.reward = 0
+    #         # Set player position to the upper-left corner (0,0)
+    #         player.setup((0, 0), self.field_size)
 
 
     def _is_valid_action(self, player, action):
@@ -664,6 +664,7 @@ class ForagingEnv(gym.Env):
 
         # Move players and check for collisions
         collisions = defaultdict(list)
+
         for player, action in zip(self.players, actions):
             if action == Action.NONE:
                 collisions[player.position].append(player)
@@ -685,22 +686,25 @@ class ForagingEnv(gym.Env):
                 continue
             v[0].position = k
 
-        # Process food loading and reward assignment
+        # Process food loading and update energy levels 
         while loading_players:
             player = loading_players.pop()
+
             # Skip if dead
             if player.controller.energy <= 0:
                 continue
                 
             # Find adjacent food
             frow, fcol = self.adjacent_food_location(*player.position)
+
+            # Skip if no food found
             if frow is None or fcol is None:
                 continue
             
             # Only the current player gets energy
-            player.controller.energy += 10 
+            player.controller.energy += 3 
 
-            # Remove the food
+            # Remove the consumed food
             self.field[frow, fcol] = 0
 
         # Check if the game is over
@@ -712,12 +716,11 @@ class ForagingEnv(gym.Env):
         )
         self._gen_valid_moves()
 
-        # Assign reward and update energy
+        # Assign reward
         for p in self.players:
 
-            # REWARD FUNCTION
             if p.controller.energy > 0:
-                # a.reward = 10 * math.log(a.controller.energy)
+                # Reward function
                 p.reward = math.log(p.controller.energy)
             else:
                 p.reward = 0  # Assign 0 reward if energy is zero

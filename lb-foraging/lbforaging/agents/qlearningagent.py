@@ -1,3 +1,5 @@
+"""Q-Learning Foraging Agent"""
+
 import random
 from lbforaging.agents.foragingagent import BaseForagingAgent
 from lbforaging.foraging.environment import Action

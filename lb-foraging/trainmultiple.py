@@ -9,9 +9,9 @@ if __name__ == "__main__":
     # Run simulations
     results, results_dir, num_runs = run_multiple_simulations(
         agent_types=agent_types,
-        num_runs=10,
-        num_episodes=20000,
-        max_steps=50,
+        num_runs=5,
+        num_episodes=15000,
+        max_steps=30,
         starting_energy=10,
         energy_cost=1,
     )

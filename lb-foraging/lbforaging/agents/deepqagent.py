@@ -1,3 +1,5 @@
+"""Deep Q-Learning Agent for Foraging Tasks"""
+
 import random
 import numpy as np
 import torch
@@ -13,9 +15,9 @@ from lbforaging.foraging.environment import Action
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, output_dim)
+        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, output_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -51,13 +53,13 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
 
         # DQN parameters
         self.gamma = 0.99  # Discount factor
-        self.epsilon = 0.1  # Exploration rate
+        self.epsilon = 1  # Exploration rate
         self.epsilon_decay = 0.995  # Decay rate for epsilon
-        self.epsilon_min = 0.01  # Minimum epsilon value
-        self.batch_size = 256  # Batch size for training
-        self.target_update = 5  # How often to update target network (steps)
+        self.epsilon_min = 0.05  # Minimum epsilon value
+        self.batch_size = 128  # Batch size for training
+        self.target_update = 100  # How often to update target network (steps)
         self.learning_rate = 0.001  # Learning rate
-        self.memory_size = 10000  # Replay memory size
+        self.memory_size = 50000  # Replay memory size
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
@@ -100,9 +102,12 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         return tuple(obs)
 
     def preprocess_state(self, obs):
-        """Convert observation to tensor for DQN input"""
-        # Flatten and normalise the observation
+        """Convert observation to tensor for DQN input with energy level"""
+        # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
+        
+        # # Append energy level to the state
+        # state = np.append(state, self.energy)
         
         # Initialise networks if this is the first time we're seeing data
         if self.input_dim is None:
@@ -110,7 +115,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         
         # Handle case where observation dimension changes
         if len(state) != self.input_dim:
-            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitialising networks.")
+            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
             self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)

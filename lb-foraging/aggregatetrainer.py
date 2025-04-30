@@ -53,7 +53,7 @@ def run_multiple_simulations(
                 agent_type=agent_type,
                 starting_energy=starting_energy,
                 energy_cost=energy_cost,
-                display_info=False,
+                display_info=True,
                 log_dir=run_log_dir,
                 render_mode=None,
             )

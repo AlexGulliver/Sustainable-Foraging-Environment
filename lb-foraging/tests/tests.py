@@ -1,3 +1,5 @@
+"""Unit tests for the Sustainable Foraging Environment."""
+
 import unittest
 import numpy as np
 import gymnasium as gym
@@ -64,13 +66,36 @@ class TestSustainableForagingEnvironment(unittest.TestCase):
         # Move agent EAST
         obs, rewards, done, _, _ = self.env.step([Action.EAST.value])
         self.assertEqual(self.env.unwrapped.players[0].position, (1, 1))
-        
-        # Try invalid movement (outside grid)
-        self.env.unwrapped.players[0].position = (0, 0)
+
+    def test_boundary_conditions(self):
+        """Test that agents cannot move beyond grid boundaries."""
+        # Test upper boundary (row 0)
+        self.env.unwrapped.players[0].position = (0, 1)
         self.env.unwrapped.test_gen_valid_moves()
-        obs, rewards, done, _, _ = self.env.step([Action.NORTH.value])
-        # Agent should stay in place if move is invalid
-        self.assertEqual(self.env.unwrapped.players[0].position, (0, 0))
+        obs, _, _, _, _ = self.env.step([Action.NORTH.value])
+        self.assertEqual(self.env.unwrapped.players[0].position, (0, 1), 
+                        "Agent should not be able to move beyond top boundary")
+        
+        # Test left boundary (column 0)
+        self.env.unwrapped.players[0].position = (1, 0)
+        self.env.unwrapped.test_gen_valid_moves()
+        obs, _, _, _, _ = self.env.step([Action.WEST.value])
+        self.assertEqual(self.env.unwrapped.players[0].position, (1, 0), 
+                        "Agent should not be able to move beyond left boundary")
+        
+        # Test lower boundary (row 2 in a 3x3 grid)
+        self.env.unwrapped.players[0].position = (2, 1)
+        self.env.unwrapped.test_gen_valid_moves()
+        obs, _, _, _, _ = self.env.step([Action.SOUTH.value])
+        self.assertEqual(self.env.unwrapped.players[0].position, (2, 1), 
+                        "Agent should not be able to move beyond bottom boundary")
+        
+        # Test right boundary (column 2 in a 3x3 grid)
+        self.env.unwrapped.players[0].position = (1, 2)
+        self.env.unwrapped.test_gen_valid_moves()
+        obs, _, _, _, _ = self.env.step([Action.EAST.value])
+        self.assertEqual(self.env.unwrapped.players[0].position, (1, 2), 
+                        "Agent should not be able to move beyond right boundary")
 
     def test_reset_functionality(self):
         """Test that the environment resets correctly."""

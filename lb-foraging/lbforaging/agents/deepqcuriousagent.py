@@ -34,9 +34,9 @@ class ReplayMemory:
 class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, output_dim)
+        self.fc1 = nn.Linear(input_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, output_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -113,16 +113,15 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.gamma = 0.99  # Discount factor
         self.epsilon = 1  # Initial exploration rate
         self.epsilon_decay = 0.995  # Decay rate for epsilon
-        self.epsilon_min = 0.01  # Minimum epsilon value
-        self.batch_size = 256  # Batch size for training
-        self.target_update = 5  # How often to update target network (steps)
+        self.epsilon_min = 0.05  # Minimum epsilon value
+        self.batch_size = 128  # Batch size for training
+        self.target_update = 100  # How often to update target network (steps)
         self.learning_rate = 0.001  # Learning rate
-        self.memory_size = 10000  # Replay memory size
+        self.memory_size = 50000  # Replay memory size
 
         # Curiosity parameters
-        self.curiosity_weight = 0.75  # Weight for intrinsic reward
-        self.curiosity_lr = 0.001  # Learning rate for curiosity model
-        self.curiosity_decay = 0.9999
+        self.curiosity_weight = 0.2  # Weight for intrinsic reward
+        self.curiosity_lr = 0.00001  # Learning rate for curiosity model
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
@@ -174,17 +173,20 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         return tuple(obs)
 
     def preprocess_state(self, obs):
-        """Convert observation to tensor for DQN input"""
-        # Flatten and normalise the observation
+        """Convert observation to tensor for DQN input with energy level"""
+        # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
         
-        # Initialise networks if this is the first time seeing data
+        # # Append energy level to the state
+        # state = np.append(state, self.energy)
+        
+        # Initialise networks if this is the first time we're seeing data
         if self.input_dim is None:
             self._initialise_networks(len(state))
         
         # Handle case where observation dimension changes
         if len(state) != self.input_dim:
-            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitialising networks.")
+            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
             self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
@@ -201,22 +203,31 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
                 return list(Action)[action_idx]
 
     def compute_intrinsic_reward(self, state, action, next_state):
-        """Compute intrinsic reward based on prediction error"""
+        """Compute intrinsic reward with emphasis on energy changes"""
         if self.forward_model is None:
-            return 0.0  # Return zero intrinsic reward if model isn't initialised yet
+            return 0.0
         
         # Convert action to tensor index
         action_idx = torch.tensor([list(Action).index(action)], dtype=torch.long)
-
+        
+        # Get current and next energy values
+        current_energy = state[0, -1].item()  # Assuming energy is last element
+        next_energy = next_state[0, -1].item()
+        
         # Predict next state
         with torch.no_grad():
             next_state_pred = self.forward_model(state, action_idx)
-
-        # Compute prediction error (curiosity)
-        prediction_error = F.mse_loss(next_state_pred, next_state)
-
-        return prediction_error.item()
-
+        
+        # Compute standard prediction error
+        standard_error = F.mse_loss(next_state_pred, next_state)
+        
+        # # Add extra weight to energy changes
+        # energy_change = abs(next_energy - current_energy)
+        # energy_bonus = 10.0 * energy_change  # Scale factor for energy changes
+        
+        # return standard_error.item() + energy_bonus
+        return standard_error.item()
+    
     def update_curiosity_model(self, state_batch, action_batch, next_state_batch):
         """Update the forward model to better predict state transitions"""
         # Convert actions to tensor indices

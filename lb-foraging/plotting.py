@@ -486,7 +486,8 @@ class DataCollector:
             return
             
         total_episodes = len(self.episode_rewards[0])
-        window_size = max(10, int(total_episodes / 100))
+        window_size = 50
+        # window_size = max(10, int(total_episodes / 100))
         
         plt.figure(figsize=PLOT_CONFIG["figure_size"])
         
