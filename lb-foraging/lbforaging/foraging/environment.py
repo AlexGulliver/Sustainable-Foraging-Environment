@@ -36,7 +36,7 @@ class Player:
         self.position = None
         self.field_size = None
         self.previous_score = 0
-        self.score = 0 # Cumulative reward
+        self.score = 0  # Cumulative reward
         self.reward = 0
         self.history = None
         self.current_step = None
@@ -262,7 +262,7 @@ class ForagingEnv(gym.Env):
             or abs(player.position[1] - col) == 1
             and player.position[0] == row
         ]
-    
+
     # # Bottom right corner food spawn
     # def spawn_food(self, max_num_food):
     #     food_count = 0
@@ -280,7 +280,6 @@ class ForagingEnv(gym.Env):
     #         food_count += 1
 
     #     self._food_spawned = self.field.sum()
-
 
     # Original food spawn
     def spawn_food(self, max_num_food):
@@ -300,7 +299,7 @@ class ForagingEnv(gym.Env):
             food_count += 1
         self._food_spawned = self.field.sum()
 
-    # Spawn food in bottom corners 
+    # Spawn food in bottom corners
     # def spawn_food(self, max_num_food):
     #     """
     #     Spawns food in the bottom corners of the field.
@@ -308,19 +307,19 @@ class ForagingEnv(gym.Env):
     #     """
     #     # Reset any existing food
     #     self.field = np.zeros(self.field_size, np.int32)
-        
+
     #     # Force max_num_food to be 2
     #     max_num_food = min(max_num_food, 2)
-        
+
     #     # Get the dimensions of the field
     #     rows, cols = self.field_size
-        
+
     #     # Define the positions for the two food items (bottom corners)
     #     food_positions = [
     #         (rows - 1, 0),           # Bottom-left corner
     #         (rows - 1, cols - 1)     # Bottom-right corner
     #     ]
-        
+
     #     # Place food at the defined positions
     #     food_count = 0
     #     for row, col in food_positions[:max_num_food]:
@@ -328,10 +327,10 @@ class ForagingEnv(gym.Env):
     #         if self._is_empty_location(row, col):
     #             self.field[row, col] = 1
     #             food_count += 1
-        
+
     #     self._food_spawned = food_count
-        
-    #     # In case any position is blocked (which should be rare), 
+
+    #     # In case any position is blocked (which should be rare),
     #     # fill remaining food using the original algorithm
     #     attempts = 0
     #     while food_count < max_num_food and attempts < 100:
@@ -342,7 +341,7 @@ class ForagingEnv(gym.Env):
     #             continue
     #         self.field[row, col] = 1
     #         food_count += 1
-        
+
     #     self._food_spawned = self.field.sum()
 
     # Replenish food only in the bottom-right corner of the field
@@ -363,7 +362,6 @@ class ForagingEnv(gym.Env):
     #         self.field[row, col] = 1
 
     #     self._food_spawned = self.field.sum()
-
 
     # # Replenish food randomly across the field
     def replenish_food(self, replenishment_rate, previous_field, max_food):
@@ -439,7 +437,6 @@ class ForagingEnv(gym.Env):
     #         player.reward = 0
     #         # Set player position to the upper-left corner (0,0)
     #         player.setup((0, 0), self.field_size)
-
 
     def _is_valid_action(self, player, action):
         if action == Action.NONE:
@@ -691,23 +688,23 @@ class ForagingEnv(gym.Env):
                 continue
             v[0].position = k
 
-        # Process food loading and update energy levels 
+        # Process food loading and update energy levels
         while loading_players:
             player = loading_players.pop()
 
             # Skip if dead
             if player.controller.energy <= 0:
                 continue
-                
+
             # Find adjacent food
             frow, fcol = self.adjacent_food_location(*player.position)
 
             # Skip if no food found
             if frow is None or fcol is None:
                 continue
-            
+
             # Only the current player gets energy
-            player.controller.energy += self.food_energy_value 
+            player.controller.energy += self.food_energy_value
 
             # Remove the consumed food
             self.field[frow, fcol] = 0

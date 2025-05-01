@@ -21,7 +21,7 @@ class RandomForagingAgent(BaseForagingAgent):
         pass
 
     def step(self, obs):
-                
+
         state = self.get_state(obs)
 
         action = self.choose_action(state)

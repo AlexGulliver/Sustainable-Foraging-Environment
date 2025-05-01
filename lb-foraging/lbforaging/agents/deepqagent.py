@@ -63,15 +63,15 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
-        
+
         # Initialize input_dim to None, will be set in the first step
         self.input_dim = None
-        
+
         # Networks will be initialised after we know the input dimensions
         self.policy_net = None
         self.target_net = None
         self.optimiser = None
-        
+
         # Initialise replay memory
         self.memory = ReplayMemory(self.memory_size)
 
@@ -87,7 +87,7 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
     def _initialise_networks(self, input_dim):
         """Initialise networks once we know the input dimension"""
         self.input_dim = input_dim
-        
+
         # Initialise networks
         self.policy_net = DQN(self.input_dim, self.output_dim)
         self.target_net = DQN(self.input_dim, self.output_dim)
@@ -105,17 +105,19 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         """Convert observation to tensor for DQN input with energy level"""
         # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
-        
+
         # # Append energy level to the state
         # state = np.append(state, self.energy)
-        
+
         # Initialise networks if this is the first time we're seeing data
         if self.input_dim is None:
             self._initialise_networks(len(state))
-        
+
         # Handle case where observation dimension changes
         if len(state) != self.input_dim:
-            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
+            print(
+                f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks."
+            )
             self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
@@ -144,9 +146,11 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         non_final_mask = torch.tensor(
             [not done for done in batch.done], dtype=torch.bool
         )
-        
+
         # Filter out None values that might occur before networks are initialised
-        valid_next_states = [s for s, d in zip(batch.next_state, batch.done) if not d and s is not None]
+        valid_next_states = [
+            s for s, d in zip(batch.next_state, batch.done) if not d and s is not None
+        ]
         if valid_next_states:
             non_final_next_states = torch.cat(valid_next_states)
         else:
@@ -225,7 +229,11 @@ class DeepQLearningForagingAgent(BaseForagingAgent):
         self.reward = reward
 
         # If we have a previous state and action, store experience in replay memory
-        if self.last_state is not None and self.last_action is not None and self.policy_net is not None:
+        if (
+            self.last_state is not None
+            and self.last_action is not None
+            and self.policy_net is not None
+        ):
             # Preprocess states for storage
             last_state_tensor = self.preprocess_state(self.last_state)
             current_state_tensor = self.preprocess_state(self.current_state)

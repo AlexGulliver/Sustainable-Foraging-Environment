@@ -63,7 +63,7 @@ class QLearningForagingAgent(BaseForagingAgent):
         # Deduct survival cost
         self.energy = max(0, self.energy - self.survival_cost)
 
-        #print(f"Energy: {self.energy}")
+        # print(f"Energy: {self.energy}")
 
         return action
 

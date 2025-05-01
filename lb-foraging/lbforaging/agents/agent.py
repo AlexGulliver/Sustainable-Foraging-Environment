@@ -58,7 +58,7 @@ class BaseAgent:
             state = state.replace(c, "")
 
         for a in obs.players:
-            state = state + str(a.position[0]) + str(a.position[1]) # + str(a.level)
+            state = state + str(a.position[0]) + str(a.position[1])  # + str(a.level)
 
         return int(state)
 

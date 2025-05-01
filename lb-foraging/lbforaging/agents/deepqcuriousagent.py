@@ -53,10 +53,10 @@ class ForwardModel(nn.Module):
 
         # State and action encoders
         self.state_encoder = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim), 
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),  # Add extra layer
-            nn.ReLU()
+            nn.ReLU(),
         )
         self.action_encoder = nn.Sequential(
             nn.Linear(action_dim, hidden_dim), nn.ReLU()
@@ -86,6 +86,7 @@ class ForwardModel(nn.Module):
         next_state_pred = self.combined(combined)
 
         return next_state_pred
+
 
 # Inverse Model for predicting actions from state transitions
 class InverseModel(nn.Module):
@@ -125,7 +126,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
 
         # Output dimension is the number of possible actions
         self.output_dim = len(Action)
-        
+
         # Initialise input_dim to None, will be set in the first step
         self.input_dim = None
 
@@ -152,7 +153,7 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
     def _initialise_networks(self, input_dim):
         """Initialise networks once we know the input dimension"""
         self.input_dim = input_dim
-        
+
         # Initialise Q-networks
         self.policy_net = DQN(self.input_dim, self.output_dim)
         self.target_net = DQN(self.input_dim, self.output_dim)
@@ -162,11 +163,17 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         # Initialise curiosity model
         self.forward_model = ForwardModel(self.input_dim, self.output_dim)
         self.inverse_model = InverseModel(self.input_dim, self.output_dim)
-        self.inverse_optimiser = optim.Adam(self.inverse_model.parameters(), lr=self.curiosity_lr)
+        self.inverse_optimiser = optim.Adam(
+            self.inverse_model.parameters(), lr=self.curiosity_lr
+        )
 
         # Initialise optimisers
-        self.q_optimiser = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
-        self.curiosity_optimiser = optim.Adam(self.forward_model.parameters(), lr=self.curiosity_lr)
+        self.q_optimiser = optim.Adam(
+            self.policy_net.parameters(), lr=self.learning_rate
+        )
+        self.curiosity_optimiser = optim.Adam(
+            self.forward_model.parameters(), lr=self.curiosity_lr
+        )
 
     def get_state(self, obs):
         """Convert observation to a state representation"""
@@ -176,17 +183,19 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         """Convert observation to tensor for DQN input with energy level"""
         # Flatten and normalize the observation
         state = np.array(obs, dtype=np.float32)
-        
+
         # # Append energy level to the state
         # state = np.append(state, self.energy)
-        
+
         # Initialise networks if this is the first time we're seeing data
         if self.input_dim is None:
             self._initialise_networks(len(state))
-        
+
         # Handle case where observation dimension changes
         if len(state) != self.input_dim:
-            print(f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks.")
+            print(
+                f"Warning: Observation dimension changed from {self.input_dim} to {len(state)}. Reinitializing networks."
+            )
             self._initialise_networks(len(state))
 
         return torch.tensor([state], dtype=torch.float32)
@@ -206,28 +215,28 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         """Compute intrinsic reward with emphasis on energy changes"""
         if self.forward_model is None:
             return 0.0
-        
+
         # Convert action to tensor index
         action_idx = torch.tensor([list(Action).index(action)], dtype=torch.long)
-        
+
         # Get current and next energy values
         current_energy = state[0, -1].item()  # Assuming energy is last element
         next_energy = next_state[0, -1].item()
-        
+
         # Predict next state
         with torch.no_grad():
             next_state_pred = self.forward_model(state, action_idx)
-        
+
         # Compute standard prediction error
         standard_error = F.mse_loss(next_state_pred, next_state)
-        
+
         # # Add extra weight to energy changes
         # energy_change = abs(next_energy - current_energy)
         # energy_bonus = 10.0 * energy_change  # Scale factor for energy changes
-        
+
         # return standard_error.item() + energy_bonus
         return standard_error.item()
-    
+
     def update_curiosity_model(self, state_batch, action_batch, next_state_batch):
         """Update the forward model to better predict state transitions"""
         # Convert actions to tensor indices
@@ -261,9 +270,11 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         non_final_mask = torch.tensor(
             [not done for done in batch.done], dtype=torch.bool
         )
-        
+
         # Filter out None values that might occur before networks are initialised
-        valid_next_states = [s for s, d in zip(batch.next_state, batch.done) if not d and s is not None]
+        valid_next_states = [
+            s for s, d in zip(batch.next_state, batch.done) if not d and s is not None
+        ]
         if valid_next_states:
             non_final_next_states = torch.cat(valid_next_states)
         else:
@@ -295,7 +306,9 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
             ).max(1)[0]
 
         # Compute the expected Q values
-        expected_state_action_values = combined_reward_batch + (self.gamma * next_state_values)
+        expected_state_action_values = combined_reward_batch + (
+            self.gamma * next_state_values
+        )
 
         # Compute Huber loss
         q_loss = F.smooth_l1_loss(
@@ -316,13 +329,13 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         )
 
         inverse_loss = self.update_inverse_model(
-        state_batch, torch.cat(batch.next_state), batch.action
+            state_batch, torch.cat(batch.next_state), batch.action
         )
-        
+
         # Decay epsilon
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
         return q_loss.item(), curiosity_loss
-    
+
     def update_inverse_model(self, state_batch, next_state_batch, action_batch):
         action_indices = torch.tensor(
             [list(Action).index(a) for a in action_batch], dtype=torch.long
@@ -335,7 +348,6 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.inverse_optimiser.step()
 
         return loss.item()
-
 
     def step(self, obs):
         """Take a step in the environment"""
@@ -372,7 +384,11 @@ class CuriosityDrivenDQNAgent(BaseForagingAgent):
         self.reward = reward
 
         # If we have a previous state and action, store experience in replay memory
-        if self.last_state is not None and self.last_action is not None and self.policy_net is not None:
+        if (
+            self.last_state is not None
+            and self.last_action is not None
+            and self.policy_net is not None
+        ):
             # Preprocess states for storage
             last_state_tensor = self.preprocess_state(self.last_state)
             current_state_tensor = self.preprocess_state(self.current_state)
