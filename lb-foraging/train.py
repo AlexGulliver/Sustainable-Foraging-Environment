@@ -11,6 +11,8 @@ if __name__ == "__main__":
         agent_type="curious_dqn", # Choose from: "random", "qlearning", "dqn", "curious_dqn"
         starting_energy=10, # Initial energy for agents
         energy_cost=1, # Energy cost per step
+        replenishment_rate=1, # Rate at which food is replenished
+        food_energy_value=3, # Energy value of food
         display_info=True, # Whether to display detailed info during training
         log_dir=None, # Directory to save logs (None for auto-generated)
         render_mode=None, # Rendering mode (None for no rendering and faster training, "human" for human rendering)

@@ -74,7 +74,7 @@ class QLearningForagingAgent(BaseForagingAgent):
         # If we have previous state and action, update Q-value
         if hasattr(self, "current_state") and hasattr(self, "last_action"):
             # Get new state from the current observation
-            next_state = self.current_state  # You might need to update this
+            next_state = self.current_state
 
             # Update Q-value with the received reward
             self.update_q_value(

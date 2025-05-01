@@ -23,6 +23,8 @@ class ForagingTrainer:
         agent_type,
         starting_energy,
         energy_cost,
+        replenishment_rate,
+        food_energy_value,
         display_info=True,
         log_dir=None,
         render_mode=None,
@@ -33,6 +35,8 @@ class ForagingTrainer:
         self.num_episodes = num_episodes
         self.agent_type = agent_type
         self.starting_energy = starting_energy
+        self.replenishment_rate = replenishment_rate
+        self.food_energy_value = food_energy_value
         self.display_info = display_info
         self.render_mode = render_mode
         
@@ -46,7 +50,7 @@ class ForagingTrainer:
         os.makedirs(self.log_dir, exist_ok=True)
         
         # Initialise environment
-        self.env = gym.make(env_name, render_mode=render_mode, max_episode_steps=max_steps)
+        self.env = gym.make(env_name, render_mode=render_mode, max_episode_steps=max_steps, replenishment_rate=replenishment_rate, food_energy_value=food_energy_value)
         self.n_agents = self.env.unwrapped.n_agents
         
         # Initialise logger

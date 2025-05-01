@@ -93,6 +93,8 @@ class ForagingEnv(gym.Env):
         observe_agent_levels=False,
         penalty=0.0,
         render_mode=None,
+        replenishment_rate=1.0,
+        food_energy_value=3,
     ):
         self.logger = logging.getLogger(__name__)
         self.render_mode = render_mode
@@ -101,6 +103,9 @@ class ForagingEnv(gym.Env):
         self.field = np.zeros(field_size, np.int32)
 
         self.penalty = penalty
+
+        self.replenishment_rate = replenishment_rate
+        self.food_energy_value = food_energy_value
 
         self.max_num_food = max_num_food
         self._food_spawned = 0.0
@@ -702,7 +707,7 @@ class ForagingEnv(gym.Env):
                 continue
             
             # Only the current player gets energy
-            player.controller.energy += 3 
+            player.controller.energy += self.food_energy_value 
 
             # Remove the consumed food
             self.field[frow, fcol] = 0
@@ -710,7 +715,7 @@ class ForagingEnv(gym.Env):
         # Check if the game is over
         self._game_over = self._max_episode_steps <= self.current_step
         self.replenish_food(
-            replenishment_rate=1,
+            replenishment_rate=self.replenishment_rate,
             previous_field=self.field,
             max_food=self.max_num_food,
         )

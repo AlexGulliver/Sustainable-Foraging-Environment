@@ -14,6 +14,10 @@ def run_multiple_simulations(
         num_episodes, 
         starting_energy, 
         energy_cost,
+        replenishment_rate,
+        food_energy_value,
+        render_mode,
+        display_info,
         env_name="SustainableForagingEnv-v0"
         ):
     """Run multiple simulations for each agent type and collect aggregate results"""
@@ -53,9 +57,11 @@ def run_multiple_simulations(
                 agent_type=agent_type,
                 starting_energy=starting_energy,
                 energy_cost=energy_cost,
-                display_info=True,
+                replenishment_rate=replenishment_rate,
+                food_energy_value=food_energy_value,
+                display_info=display_info,
                 log_dir=run_log_dir,
-                render_mode=None,
+                render_mode=render_mode,
             )
             
             # Train the agent
