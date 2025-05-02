@@ -1,8 +1,8 @@
 # Sustainable Foraging Problem Grid Environment
-This environment for my final year BSc Computer Science project investigating the use of Curious Reinforcement Learning Agents in the Sustainable Foraging Problem.
-
+This is the environment that was created for my final year BSc Computer Science project investigating the use of Curious Reinforcement Learning Agents in the Sustainable Foraging Problem. It modifies the lb-foraging environment to align it to the Sustainable Foraging problem with the inclusion of a physically navigable grid that introduces spatial dynamics. 
 # Features
 
+- Highly configurable grid-based environment built on OpenAI gym
 - Includes an implementation of a deep q-network (DQN) with experience replay and DQN with curiosity learning module
 - Detailed plotting and logging
 - Multiple run training aggregator
